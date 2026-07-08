@@ -5,4 +5,5 @@ dist
 .env*.local
 data/*.sqlite
 data/*.sqlite-*
+data/cvs
 npm-debug.log*

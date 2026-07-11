@@ -14,6 +14,42 @@
   --warning-soft: #fff6da;
   --info: #295f98;
   --info-soft: #eaf4ff;
+
+  --button-hover-bg: #f0eee9;
+  --th-bg: #eeece7;
+  --th-color: #4d5157;
+  --code-bg: #efede8;
+  --success: #155443;
+  --success-soft: #eaf8ef;
+  --shadow: rgba(0, 0, 0, 0.25);
+  --modal-backdrop: rgba(29, 29, 31, 0.45);
+}
+
+[data-theme="dark"] {
+  --background: #0f1215;
+  --foreground: #e4e6eb;
+  --muted: #8d929a;
+  --border: #2d3139;
+  --surface: #17191d;
+  --surface-soft: #20232b;
+  --primary: #2eb38f;
+  --primary-strong: #3cd4ab;
+  --danger: #e05243;
+  --danger-soft: #2e1b19;
+  --focus: #2eb38f;
+  --warning: #e5a93b;
+  --warning-soft: #2a2213;
+  --info: #4da3ff;
+  --info-soft: #16293d;
+
+  --button-hover-bg: #2d3139;
+  --th-bg: #20232b;
+  --th-color: #a3aab6;
+  --code-bg: #20232b;
+  --success: #3cd4ab;
+  --success-soft: #122b23;
+  --shadow: rgba(0, 0, 0, 0.5);
+  --modal-backdrop: rgba(10, 10, 12, 0.7);
 }
 
 * {
@@ -186,7 +222,7 @@ textarea:focus {
 
 .secondary-button {
   border-color: var(--border);
-  background: white;
+  background: var(--surface);
   color: var(--foreground);
 }
 
@@ -195,7 +231,7 @@ textarea:focus {
 .inline-link:hover,
 .text-button:hover,
 .file-chip:hover {
-  background: #f0eee9;
+  background: var(--button-hover-bg);
 }
 
 .danger-button {
@@ -229,8 +265,8 @@ td {
 }
 
 th {
-  background: #eeece7;
-  color: #4d5157;
+  background: var(--th-bg);
+  color: var(--th-color);
   font-size: 12px;
   font-weight: 800;
 }
@@ -278,7 +314,7 @@ tr:last-child td {
   width: fit-content;
   gap: 6px;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--surface);
   color: var(--foreground);
   font-size: 13px;
   font-weight: 700;
@@ -318,8 +354,8 @@ tr:last-child td {
 }
 
 .status-pill.entrevista {
-  background: #eaf8ef;
-  color: var(--primary-strong);
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .status-pill.rechazado {
@@ -336,7 +372,7 @@ tr:last-child td {
   width: 34px;
   height: 34px;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--surface);
   color: var(--foreground);
 }
 
@@ -362,7 +398,7 @@ tr:last-child td {
   z-index: 50;
   display: grid;
   place-items: center;
-  background: rgba(29, 29, 31, 0.45);
+  background: var(--modal-backdrop);
   padding: 20px;
 }
 
@@ -373,7 +409,7 @@ tr:last-child td {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 18px 60px var(--shadow);
 }
 
 .modal-card-wide {
@@ -502,7 +538,7 @@ tr:last-child td {
   gap: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: white;
+  background: var(--surface);
   padding: 12px;
 }
 
@@ -528,7 +564,7 @@ tr:last-child td {
 
 .note-item textarea {
   min-height: 260px;
-  background: white;
+  background: var(--surface);
 }
 
 .markdown-note {
@@ -600,7 +636,7 @@ tr:last-child td {
 
 .markdown-note code {
   border-radius: 4px;
-  background: #efede8;
+  background: var(--code-bg);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 0.92em;
   padding: 2px 4px;
@@ -633,7 +669,7 @@ tr:last-child td {
 }
 
 .markdown-note th {
-  background: #eeece7;
+  background: var(--th-bg);
 }
 
 .empty-notes {

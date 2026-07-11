@@ -4,13 +4,15 @@ import {
   ExternalLink,
   FileText,
   MessageSquareText,
+  Moon,
   Pencil,
   Plus,
   Save,
+  Sun,
   Trash2,
   X
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -189,6 +191,19 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const activeTheme = document.documentElement.getAttribute("data-theme") as "light" | "dark" || "light";
+    setTheme(activeTheme);
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    document.documentElement.setAttribute("data-theme", nextTheme);
+    localStorage.setItem("theme", nextTheme);
+  };
 
   const activeApplication = useMemo(() => {
     if (!modal || modal.type === "create") {
@@ -229,6 +244,15 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
             <h1>Seguimiento</h1>
           </div>
           <div className="header-actions">
+            <button
+              className="icon-button"
+              type="button"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+              aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            >
+              {theme === "dark" ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
+            </button>
             <div className="counter" aria-label={`${applications.length} postulaciones`}>
               {applications.length}
             </div>

@@ -51,27 +51,34 @@ function sanitizeFilename(filename: string) {
   return sanitized || "cv";
 }
 
-async function saveCvFile(formData: FormData): Promise<CvInput | null> {
+async function extractCvData(formData: FormData): Promise<CvInput | null> {
   const file = formData.get("cvFile");
+  const cvVersion = formString(formData, "cvVersion");
+  
+  let cvFilename = "";
+  let cvStoredName = "";
 
-  if (!isUploadedFile(file) || file.size === 0) {
-    return null;
+  if (isUploadedFile(file) && file.size > 0) {
+    const maxSize = 15 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error("El CV supera el limite de 15 MB.");
+    }
+
+    cvFilename = sanitizeFilename(file.name || "cv");
+    const extension = path.extname(cvFilename).slice(0, 12).toLowerCase() || ".bin";
+    cvStoredName = `${Date.now()}-${crypto.randomUUID()}${extension}`;
+    const bytes = Buffer.from(await file.arrayBuffer());
+
+    fs.mkdirSync(getCvStorageDir(), { recursive: true });
+    fs.writeFileSync(getCvFilePath(cvStoredName), bytes);
   }
 
-  const maxSize = 15 * 1024 * 1024;
-  if (file.size > maxSize) {
-    throw new Error("El CV supera el limite de 15 MB.");
+  // If the field cvVersion is present in the form at all (even if empty), we return an object.
+  // This allows clearing the cvVersion by submitting an empty string.
+  if (formData.has("cvVersion") || cvFilename) {
+    return { cvFilename, cvStoredName, cvVersion };
   }
-
-  const cvFilename = sanitizeFilename(file.name || "cv");
-  const extension = path.extname(cvFilename).slice(0, 12).toLowerCase() || ".bin";
-  const cvStoredName = `${Date.now()}-${crypto.randomUUID()}${extension}`;
-  const bytes = Buffer.from(await file.arrayBuffer());
-
-  fs.mkdirSync(getCvStorageDir(), { recursive: true });
-  fs.writeFileSync(getCvFilePath(cvStoredName), bytes);
-
-  return { cvFilename, cvStoredName };
+  return null;
 }
 
 export async function createPostulacion(formData: FormData) {
@@ -81,7 +88,7 @@ export async function createPostulacion(formData: FormData) {
     return;
   }
 
-  const cv = await saveCvFile(formData);
+  const cv = await extractCvData(formData);
   const id = createApplication(input, cv);
   const notaInicial = formString(formData, "notaInicial");
 
@@ -99,7 +106,7 @@ export async function updatePostulacion(id: number, formData: FormData) {
     return;
   }
 
-  const cv = await saveCvFile(formData);
+  const cv = await extractCvData(formData);
   updateApplication(id, input, cv);
   revalidatePath("/");
 }

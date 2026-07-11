@@ -22,6 +22,7 @@ export type Application = {
   textoPostulacion: string;
   cvFilename: string;
   cvStoredName: string;
+  cvVersion: string;
   noteCount: number;
   latestNote: string;
   notes: ApplicationNote[];
@@ -40,6 +41,7 @@ export type ApplicationInput = {
 export type CvInput = {
   cvFilename: string;
   cvStoredName: string;
+  cvVersion: string;
 };
 
 type ApplicationRow = {
@@ -50,6 +52,7 @@ type ApplicationRow = {
   texto_postulacion: string;
   cv_filename: string;
   cv_stored_name: string;
+  cv_version: string;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -136,6 +139,7 @@ function ensureApplicationStatusConstraint(database: Database.Database) {
         texto_postulacion TEXT NOT NULL DEFAULT '',
         cv_filename TEXT NOT NULL DEFAULT '',
         cv_stored_name TEXT NOT NULL DEFAULT '',
+        cv_version TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now')),
         deleted_at TEXT DEFAULT NULL
@@ -150,6 +154,7 @@ function ensureApplicationStatusConstraint(database: Database.Database) {
         texto_postulacion,
         cv_filename,
         cv_stored_name,
+        cv_version,
         created_at,
         updated_at,
         deleted_at
@@ -166,6 +171,7 @@ function ensureApplicationStatusConstraint(database: Database.Database) {
         texto_postulacion,
         cv_filename,
         cv_stored_name,
+        cv_version,
         created_at,
         updated_at,
         deleted_at
@@ -200,6 +206,7 @@ function migrateDatabase(database: Database.Database) {
       texto_postulacion TEXT NOT NULL DEFAULT '',
       cv_filename TEXT NOT NULL DEFAULT '',
       cv_stored_name TEXT NOT NULL DEFAULT '',
+      cv_version TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       deleted_at TEXT DEFAULT NULL
@@ -210,6 +217,7 @@ function migrateDatabase(database: Database.Database) {
   addColumnIfMissing(database, "postulaciones", "texto_postulacion", "TEXT NOT NULL DEFAULT ''");
   addColumnIfMissing(database, "postulaciones", "cv_filename", "TEXT NOT NULL DEFAULT ''");
   addColumnIfMissing(database, "postulaciones", "cv_stored_name", "TEXT NOT NULL DEFAULT ''");
+  addColumnIfMissing(database, "postulaciones", "cv_version", "TEXT NOT NULL DEFAULT ''");
   addColumnIfMissing(database, "postulaciones", "deleted_at", "TEXT DEFAULT NULL");
   ensureApplicationStatusConstraint(database);
 
@@ -278,6 +286,7 @@ function mapApplication(row: ApplicationRow, notes: ApplicationNote[]): Applicat
     textoPostulacion: row.texto_postulacion,
     cvFilename: row.cv_filename,
     cvStoredName: row.cv_stored_name,
+    cvVersion: row.cv_version,
     noteCount: notes.length,
     latestNote: notes[0]?.content ?? "",
     notes,
@@ -312,6 +321,7 @@ export function listApplications(): Application[] {
         texto_postulacion,
         cv_filename,
         cv_stored_name,
+        cv_version,
         created_at,
         updated_at,
         deleted_at
@@ -355,7 +365,8 @@ export function createApplication(input: ApplicationInput, cv?: CvInput | null):
         estado,
         texto_postulacion,
         cv_filename,
-        cv_stored_name
+        cv_stored_name,
+        cv_version
       )
       VALUES (
         @nombreEmpresa,
@@ -363,14 +374,16 @@ export function createApplication(input: ApplicationInput, cv?: CvInput | null):
         @estado,
         @textoPostulacion,
         @cvFilename,
-        @cvStoredName
+        @cvStoredName,
+        @cvVersion
       )
     `
     )
     .run({
       ...input,
       cvFilename: cv?.cvFilename ?? "",
-      cvStoredName: cv?.cvStoredName ?? ""
+      cvStoredName: cv?.cvStoredName ?? "",
+      cvVersion: cv?.cvVersion ?? ""
     });
 
   return Number(result.lastInsertRowid);
@@ -385,7 +398,8 @@ export function updateApplication(id: number, input: ApplicationInput, cv?: CvIn
           estado = @estado,
           texto_postulacion = @textoPostulacion,
           cv_filename = CASE WHEN @cvFilename <> '' THEN @cvFilename ELSE cv_filename END,
-          cv_stored_name = CASE WHEN @cvStoredName <> '' THEN @cvStoredName ELSE cv_stored_name END
+          cv_stored_name = CASE WHEN @cvStoredName <> '' THEN @cvStoredName ELSE cv_stored_name END,
+          cv_version = CASE WHEN @cvVersion IS NOT NULL THEN @cvVersion ELSE cv_version END
       WHERE id = @id
         AND deleted_at IS NULL
     `
@@ -393,7 +407,8 @@ export function updateApplication(id: number, input: ApplicationInput, cv?: CvIn
     id,
     ...input,
     cvFilename: cv?.cvFilename ?? "",
-    cvStoredName: cv?.cvStoredName ?? ""
+    cvStoredName: cv?.cvStoredName ?? "",
+    cvVersion: cv?.cvVersion ?? ""
   });
 }
 

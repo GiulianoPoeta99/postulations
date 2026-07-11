@@ -13,7 +13,7 @@ describe("ApplicationFields", () => {
     render(<ApplicationFields />);
     
     expect(screen.getByPlaceholderText(/nombre empresa/i)).toHaveValue("");
-    expect(screen.getByRole("combobox")).toHaveValue("aplicado");
+    expect(screen.getByRole("combobox", { name: /estado/i })).toHaveValue("aplicado");
     expect(screen.getByPlaceholderText(/https:\/\//i)).toHaveValue("");
     expect(screen.getByRole("textbox", { name: /texto/i })).toHaveValue("");
   });
@@ -38,7 +38,7 @@ describe("ApplicationFields", () => {
     render(<ApplicationFields application={app} />);
     
     expect(screen.getByPlaceholderText(/nombre empresa/i)).toHaveValue("Test Inc");
-    expect(screen.getByRole("combobox")).toHaveValue("entrevista");
+    expect(screen.getByRole("combobox", { name: /estado/i })).toHaveValue("entrevista");
     expect(screen.getByPlaceholderText(/https:\/\//i)).toHaveValue("https://test.com");
     expect(screen.getByRole("textbox", { name: /texto/i })).toHaveValue("My application text");
     // Should show existing CV info

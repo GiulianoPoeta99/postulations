@@ -53,6 +53,7 @@ type ModalState =
   | { type: "edit"; applicationId: number }
   | { type: "delete"; applicationId: number }
   | { type: "notes"; applicationId: number }
+  | { type: "previewCv"; applicationId: number }
   | null;
 
 type PostulacionesClientProps = {
@@ -62,6 +63,7 @@ type PostulacionesClientProps = {
 type ApplicationFieldsProps = {
   application?: Application;
   includeInitialNote?: boolean;
+  cvVersions?: string[];
 };
 
 function applicationTextPreview(text: string) {
@@ -95,7 +97,7 @@ function MarkdownNote({ content }: { content: string }) {
   );
 }
 
-export function ApplicationFields({ application, includeInitialNote = false }: ApplicationFieldsProps) {
+export function ApplicationFields({ application, includeInitialNote = false, cvVersions = [] }: ApplicationFieldsProps) {
   const [notaInicialText, setNotaInicialText] = useState("");
 
   return (
@@ -162,17 +164,31 @@ export function ApplicationFields({ application, includeInitialNote = false }: A
         </div>
       ) : null}
 
-      <label className="field span-2">
-        <span>CV usado</span>
-        <input
-          name="cvFile"
-          type="file"
-          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        />
-      </label>
+      <div className="field span-2 cv-selection-row">
+        <label className="field" style={{ flex: 1 }}>
+          <span>CV Generado</span>
+          <select name="cvVersion" defaultValue={application?.cvVersion ?? ""}>
+            <option value="">Ninguno</option>
+            {cvVersions.map(v => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+        </label>
+        
+        <span style={{ display: 'flex', alignItems: 'center', margin: '0 1rem', color: 'var(--gray)' }}>O</span>
+        
+        <label className="field" style={{ flex: 1 }}>
+          <span>Subir CV manual</span>
+          <input
+            name="cvFile"
+            type="file"
+            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          />
+        </label>
+      </div>
 
       {application?.cvStoredName ? (
-        <a className="file-chip span-2" href={cvHref(application)}>
+        <a className="file-chip span-2" href={cvHref(application)} target="_blank" rel="noopener noreferrer">
           <FileText size={16} aria-hidden="true" />
           {application.cvFilename ?? application.cvStoredName}
         </a>
@@ -595,11 +611,15 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                           ) : null}
                         </td>
                         <td>
-                          {application.cvStoredName ? (
-                            <a className="inline-link" href={cvHref(application)}>
-                              <FileText size={14} aria-hidden="true" />
-                              CV
-                            </a>
+                          {(application.cvStoredName || application.cvVersion) ? (
+                            <button
+                              className="text-button"
+                              type="button"
+                              onClick={() => setModal({ type: "previewCv", applicationId: application.id })}
+                            >
+                              <FileText size={15} aria-hidden="true" />
+                              Ver CV
+                            </button>
                           ) : (
                             <span className="muted-text">Sin CV</span>
                           )}
@@ -806,7 +826,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
       {modal?.type === "create" ? (
         <Modal title="Nueva postulacion" onClose={closeModal}>
           <form action={runAction(createPostulacion, closeModal)} className="modal-body">
-            <ApplicationFields includeInitialNote />
+            <ApplicationFields includeInitialNote cvVersions={cvVersions} />
             {error ? <p className="form-error">{error}</p> : null}
             <footer className="modal-footer">
               <button className="secondary-button" type="button" onClick={closeModal}>
@@ -828,7 +848,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
             className="modal-body"
             key={activeApplication.id}
           >
-            <ApplicationFields application={activeApplication} />
+            <ApplicationFields application={activeApplication} cvVersions={cvVersions} />
             {error ? <p className="form-error">{error}</p> : null}
             <footer className="modal-footer">
               <button className="secondary-button" type="button" onClick={closeModal}>
@@ -1007,6 +1027,18 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                 Cerrar
               </button>
             </footer>
+          </div>
+        </Modal>
+      ) : null}
+
+      {modal?.type === "previewCv" && activeApplication ? (
+        <Modal title={`CV de postulacion a ${activeApplication.nombreEmpresa}`} onClose={closeModal} wide>
+          <div className="modal-body" style={{ height: '70vh', padding: 0 }}>
+            <iframe 
+              src={activeApplication.cvVersion ? `/api/cv/pdf?version=${activeApplication.cvVersion}&v=1` : cvHref(activeApplication)}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title="Vista previa del CV"
+            />
           </div>
         </Modal>
       ) : null}

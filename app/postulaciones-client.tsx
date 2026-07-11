@@ -5,7 +5,7 @@ import {
   FileText,
   MessageSquareText,
   Moon,
-  Pencil,
+  Play,
   Plus,
   Save,
   Sun,
@@ -15,6 +15,11 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import CodeMirror from '@uiw/react-codemirror';
+import { yaml } from '@codemirror/lang-yaml';
+import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode';
+import { EditorView } from '@codemirror/view';
+
 import {
   createNota,
   createPostulacion,
@@ -604,40 +609,46 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                       Eliminar Versión
                     </button>
                   )}
-                </div>
-
-                <div className="cv-compile-actions">
-                  <span className="cv-autosave-hint">
-                    Auto-compila al terminar de escribir
-                  </span>
-                  {compileStatus === "compiling" && (
-                    <span className="compile-status compiling">Compilando...</span>
-                  )}
-                  {compileStatus === "success" && (
-                    <span className="compile-status success">¡Listo!</span>
-                  )}
-                  {compileStatus === "error" && (
-                    <span className="compile-status error">Error</span>
-                  )}
-                  <button
-                    className="primary-button"
-                    type="button"
-                    onClick={handleCompile}
-                    disabled={compileStatus === "compiling"}
-                    title="Fuerza la compilación si el auto-compilado falló"
-                  >
-                    {compileStatus === "compiling" ? "Compilando..." : "Forzar Compilación"}
-                  </button>
+                  <div className="cv-compile-inline">
+                    {compileStatus === "compiling" && (
+                      <span className="compile-status compiling" title="Compilando...">
+                        <span className="spinner-small" aria-hidden="true"></span>
+                      </span>
+                    )}
+                    {compileStatus === "success" && (
+                      <span className="compile-status success" title="¡Listo!">✓</span>
+                    )}
+                    {compileStatus === "error" && (
+                      <span className="compile-status error" title="Error">!</span>
+                    )}
+                    <button
+                      className="primary-button icon-only"
+                      type="button"
+                      onClick={handleCompile}
+                      disabled={compileStatus === "compiling"}
+                      title="Forzar Compilación"
+                    >
+                      <Play size={15} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <textarea
-                className="cv-textarea"
-                value={cvYaml}
-                onChange={(e) => handleYamlChange(e.target.value)}
-                placeholder="Escribe la configuracion en formato YAML..."
-                spellCheck="false"
-              />
+              <div className="cv-codemirror-wrapper">
+                <CodeMirror
+                  value={cvYaml}
+                  height="100%"
+                  extensions={[yaml(), EditorView.lineWrapping]}
+                  theme={theme === "dark" ? vscodeDark : vscodeLight}
+                  onChange={(value) => handleYamlChange(value)}
+                  basicSetup={{
+                    lineNumbers: true,
+                    highlightActiveLineGutter: true,
+                    foldGutter: true,
+                    tabSize: 2,
+                  }}
+                />
+              </div>
 
               {compileError && (
                 <div className="cv-error-log">{compileError}</div>

@@ -21,7 +21,9 @@ import {
   deleteNota,
   deletePostulacion,
   updateNota,
-  updatePostulacion
+  updatePostulacion,
+  getCvYaml,
+  compileCv
 } from "@/app/actions";
 import type { Application, ApplicationStatus } from "@/lib/db";
 
@@ -192,11 +194,24 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [activeTab, setActiveTab] = useState<"postulaciones" | "cv">("postulaciones");
+  const [cvYaml, setCvYaml] = useState("");
+  const [compileStatus, setCompileStatus] = useState<"idle" | "compiling" | "success" | "error">("idle");
+  const [compileError, setCompileError] = useState("");
+  const [previewVersion, setPreviewVersion] = useState(0);
 
   useEffect(() => {
     const activeTheme = document.documentElement.getAttribute("data-theme") as "light" | "dark" || "light";
     setTheme(activeTheme);
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "cv") {
+      getCvYaml().then((yaml) => {
+        setCvYaml(yaml);
+      });
+    }
+  }, [activeTab]);
 
   const toggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
@@ -204,6 +219,40 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
     document.documentElement.setAttribute("data-theme", nextTheme);
     localStorage.setItem("theme", nextTheme);
   };
+
+  const handleCompile = async () => {
+    setCompileStatus("compiling");
+    setCompileError("");
+    try {
+      const res = await compileCv(cvYaml);
+      if (res.success) {
+        setCompileStatus("success");
+        setPreviewVersion((v) => v + 1);
+      } else {
+        setCompileStatus("error");
+        setCompileError(res.error || "Ocurrio un error desconocido al compilar.");
+      }
+    } catch (err: any) {
+      setCompileStatus("error");
+      setCompileError(err.message || "Error al llamar a la accion de compilacion.");
+    }
+  };
+
+  const handleThemeChange = (newTheme: string) => {
+    const regex = /(design\s*:\s*\n(?:\s+.*\n)*?\s+theme\s*:\s*)[a-zA-Z0-9_-]+/g;
+    if (regex.test(cvYaml)) {
+      setCvYaml(cvYaml.replace(regex, `$1${newTheme}`));
+    } else {
+      const simpleRegex = /(theme\s*:\s*)[a-zA-Z0-9_-]+/g;
+      setCvYaml(cvYaml.replace(simpleRegex, `$1${newTheme}`));
+    }
+  };
+
+  const currentTheme = useMemo(() => {
+    const regex = /theme\s*:\s*([a-zA-Z0-9_-]+)/;
+    const match = cvYaml.match(regex);
+    return match ? match[1] : "classic";
+  }, [cvYaml]);
 
   const activeApplication = useMemo(() => {
     if (!modal || modal.type === "create") {
@@ -263,108 +312,217 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
           </div>
         </header>
 
-        <div className="table-frame">
-          <table>
-            <thead>
-              <tr>
-                <th className="id-col">ID</th>
-                <th>Empresa</th>
-                <th>Propuesta</th>
-                <th>Estado</th>
-                <th>Notas</th>
-                <th>CV</th>
-                <th className="actions-col">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {applications.length === 0 ? (
+        <nav className="tab-navigation" role="tablist">
+          <button
+            className={`tab-button ${activeTab === "postulaciones" ? "active" : ""}`}
+            onClick={() => setActiveTab("postulaciones")}
+            role="tab"
+            aria-selected={activeTab === "postulaciones"}
+          >
+            Postulaciones
+          </button>
+          <button
+            className={`tab-button ${activeTab === "cv" ? "active" : ""}`}
+            onClick={() => setActiveTab("cv")}
+            role="tab"
+            aria-selected={activeTab === "cv"}
+          >
+            Mi CV (RenderCV)
+          </button>
+        </nav>
+
+        {activeTab === "postulaciones" ? (
+          <div className="table-frame">
+            <table>
+              <thead>
                 <tr>
-                  <td className="empty-state" colSpan={7}>
-                    Sin postulaciones
-                  </td>
+                  <th className="id-col">ID</th>
+                  <th>Empresa</th>
+                  <th>Propuesta</th>
+                  <th>Estado</th>
+                  <th>Notas</th>
+                  <th>CV</th>
+                  <th className="actions-col">Acciones</th>
                 </tr>
-              ) : (
-                applications.map((application) => (
-                  <tr key={application.id}>
-                    <td className="id-cell">{application.id}</td>
-                    <td>
-                      <strong>{application.nombreEmpresa}</strong>
-                    </td>
-                    <td>
-                      <div className="proposal-cell">
-                        {application.linkPropuesta ? (
-                          <a
-                            className="inline-link"
-                            href={application.linkPropuesta}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <ExternalLink size={14} aria-hidden="true" />
-                            Link
-                          </a>
-                        ) : (
-                          <span className="muted-text">Sin link</span>
-                        )}
-                        {application.textoPostulacion ? (
-                          <p>{applicationTextPreview(application.textoPostulacion)}</p>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`status-pill ${application.estado}`}>{statusLabels[application.estado]}</span>
-                    </td>
-                    <td>
-                      <button
-                        className="text-button"
-                        type="button"
-                        onClick={() => {
-                          setEditingNoteId(null);
-                          setModal({ type: "notes", applicationId: application.id });
-                        }}
-                      >
-                        <MessageSquareText size={15} aria-hidden="true" />
-                        {application.noteCount}
-                      </button>
-                      {application.latestNote ? <p className="note-preview">{markdownTextPreview(application.latestNote)}</p> : null}
-                    </td>
-                    <td>
-                      {application.cvStoredName ? (
-                        <a className="inline-link" href={cvHref(application)}>
-                          <FileText size={14} aria-hidden="true" />
-                          CV
-                        </a>
-                      ) : (
-                        <span className="muted-text">Sin CV</span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          className="icon-button"
-                          type="button"
-                          onClick={() => setModal({ type: "edit", applicationId: application.id })}
-                          title="Editar"
-                        >
-                          <Pencil size={16} aria-hidden="true" />
-                          <span className="sr-only">Editar</span>
-                        </button>
-                        <button
-                          className="icon-button danger"
-                          type="button"
-                          onClick={() => setModal({ type: "delete", applicationId: application.id })}
-                          title="Eliminar"
-                        >
-                          <Trash2 size={16} aria-hidden="true" />
-                          <span className="sr-only">Eliminar</span>
-                        </button>
-                      </div>
+              </thead>
+              <tbody>
+                {applications.length === 0 ? (
+                  <tr>
+                    <td className="empty-state" colSpan={7}>
+                      Sin postulaciones
                     </td>
                   </tr>
-                ))
+                ) : (
+                  applications.map((application) => (
+                    <tr key={application.id}>
+                      <td className="id-cell">{application.id}</td>
+                      <td>
+                        <strong>{application.nombreEmpresa}</strong>
+                      </td>
+                      <td>
+                        <div className="proposal-cell">
+                          {application.linkPropuesta ? (
+                            <a
+                              className="inline-link"
+                              href={application.linkPropuesta}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <ExternalLink size={14} aria-hidden="true" />
+                              Link
+                            </a>
+                          ) : (
+                            <span className="muted-text">Sin link</span>
+                          )}
+                          {application.textoPostulacion ? (
+                            <p>{applicationTextPreview(application.textoPostulacion)}</p>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`status-pill ${application.estado}`}>{statusLabels[application.estado]}</span>
+                      </td>
+                      <td>
+                        <button
+                          className="text-button"
+                          type="button"
+                          onClick={() => {
+                            setEditingNoteId(null);
+                            setModal({ type: "notes", applicationId: application.id });
+                          }}
+                        >
+                          <MessageSquareText size={15} aria-hidden="true" />
+                          {application.noteCount}
+                        </button>
+                        {application.latestNote ? <p className="note-preview">{markdownTextPreview(application.latestNote)}</p> : null}
+                      </td>
+                      <td>
+                        {application.cvStoredName ? (
+                          <a className="inline-link" href={cvHref(application)}>
+                            <FileText size={14} aria-hidden="true" />
+                            CV
+                          </a>
+                        ) : (
+                          <span className="muted-text">Sin CV</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="row-actions">
+                          <button
+                            className="icon-button"
+                            type="button"
+                            onClick={() => setModal({ type: "edit", applicationId: application.id })}
+                            title="Editar"
+                          >
+                            <Pencil size={16} aria-hidden="true" />
+                            <span className="sr-only">Editar</span>
+                          </button>
+                          <button
+                            className="icon-button danger"
+                            type="button"
+                            onClick={() => setModal({ type: "delete", applicationId: application.id })}
+                            title="Eliminar"
+                          >
+                            <Trash2 size={16} aria-hidden="true" />
+                            <span className="sr-only">Eliminar</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="cv-workspace">
+            <div className="cv-editor-panel">
+              <header className="cv-editor-header">
+                <label className="theme-select-wrapper">
+                  <span>Tema del CV</span>
+                  <select
+                    value={currentTheme}
+                    onChange={(e) => handleThemeChange(e.target.value)}
+                  >
+                    <option value="classic">Classic</option>
+                    <option value="moderncv">Modern CV</option>
+                    <option value="sb2nov">SB2nov</option>
+                    <option value="engineeringresumes">Engineering Resumes</option>
+                    <option value="engineeringclassic">Engineering Classic</option>
+                    <option value="harvard">Harvard</option>
+                    <option value="ink">Ink</option>
+                    <option value="opal">Opal</option>
+                    <option value="ember">Ember</option>
+                  </select>
+                </label>
+                <div className="cv-compile-actions">
+                  {compileStatus === "compiling" && (
+                    <span className="compile-status compiling">Compilando...</span>
+                  )}
+                  {compileStatus === "success" && (
+                    <span className="compile-status success">¡CV Compilado!</span>
+                  )}
+                  {compileStatus === "error" && (
+                    <span className="compile-status error">Error de compilacion</span>
+                  )}
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={handleCompile}
+                    disabled={compileStatus === "compiling"}
+                  >
+                    {compileStatus === "compiling" ? "Procesando..." : "Compilar y Guardar"}
+                  </button>
+                </div>
+              </header>
+
+              <textarea
+                className="cv-textarea"
+                value={cvYaml}
+                onChange={(e) => setCvYaml(e.target.value)}
+                placeholder="Escribe la configuracion en formato YAML..."
+                spellCheck="false"
+              />
+
+              {compileError && (
+                <div className="cv-error-log">
+                  {compileError}
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            <div className="cv-preview-panel">
+              <header className="cv-editor-header">
+                <h2>Previsualizacion en Vivo</h2>
+                {previewVersion > 0 && (
+                  <a
+                    className="inline-link"
+                    href={`/api/cv/pdf?v=${previewVersion}`}
+                    download="mi_cv.pdf"
+                  >
+                    Descargar PDF
+                  </a>
+                )}
+              </header>
+
+              <div className="cv-preview-container">
+                {previewVersion === 0 ? (
+                  <div className="cv-preview-empty">
+                    <p>No se ha compilado el CV todavía.</p>
+                    <button className="secondary-button" type="button" onClick={handleCompile}>
+                      Compilar ahora
+                    </button>
+                  </div>
+                ) : (
+                  <iframe
+                    src={`/api/cv/pdf?v=${previewVersion}`}
+                    title="Previsualizacion del CV"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {modal?.type === "create" ? (

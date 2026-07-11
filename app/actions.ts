@@ -189,6 +189,7 @@ export async function saveCvVersion(name: string, content: string): Promise<void
   if (!sanitized) return;
   const versionPath = path.join(versionsDir, `${sanitized}.yaml`);
   fs.writeFileSync(versionPath, content, "utf-8");
+  revalidatePath("/");
 }
 
 export async function deleteCvVersion(name: string): Promise<void> {
@@ -209,6 +210,7 @@ export async function deleteCvVersion(name: string): Promise<void> {
       fs.unlinkSync(path.join(outputDir, file));
     }
   }
+  revalidatePath("/");
 }
 
 export async function renameCvVersion(oldName: string, newName: string): Promise<{ success: boolean; error?: string }> {
@@ -241,6 +243,7 @@ export async function renameCvVersion(oldName: string, newName: string): Promise
         fs.renameSync(path.join(outputDir, file), path.join(outputDir, `${sanitizedNew}${suffix}`));
       }
     }
+    revalidatePath("/");
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Error al renombrar los archivos." };
@@ -272,6 +275,7 @@ export async function compileCv(name: string, yamlContent: string): Promise<{ su
 
     const newPngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${sanitized}_`) && f.endsWith(".png"));
     
+    revalidatePath("/");
     return { success: true, pageCount: newPngFiles.length };
   } catch (error: any) {
     console.error("RenderCV compile error:", error);

@@ -1,6 +1,7 @@
 "use server";
 
 import crypto from "node:crypto";
+import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
@@ -223,7 +224,6 @@ export async function compileCv(name: string, yamlContent: string): Promise<{ su
       fs.unlinkSync(path.join(outputDir, file));
     }
 
-    const { execSync } = require("node:child_process");
     const cmd = `python3 -m rendercv render "${versionPath}" -o "${outputDir}" --pdf-path "rendercv_output/${sanitized}.pdf" --png-path "rendercv_output/${sanitized}.png" --dont-generate-markdown --dont-generate-html`;
     execSync(cmd, { stdio: "pipe" });
 

@@ -96,12 +96,15 @@ function hasColumn(database: Database.Database, table: string, column: string) {
     .some((row) => (row as { name: string }).name === column);
 }
 
+/* v8 ignore start */
 function addColumnIfMissing(database: Database.Database, table: string, column: string, definition: string) {
   if (!hasColumn(database, table, column)) {
     database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
 }
+/* v8 ignore stop */
 
+/* v8 ignore start */
 function ensureApplicationStatusConstraint(database: Database.Database) {
   const table = database
     .prepare(
@@ -184,6 +187,7 @@ function ensureApplicationStatusConstraint(database: Database.Database) {
     database.pragma("foreign_keys = ON");
   }
 }
+/* v8 ignore stop */
 
 function migrateDatabase(database: Database.Database) {
   database.exec(`

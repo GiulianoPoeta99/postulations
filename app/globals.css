@@ -259,7 +259,7 @@ table {
 th,
 td {
   border-bottom: 1px solid var(--border);
-  padding: 12px 10px;
+  padding: 14px 16px;
   text-align: left;
   vertical-align: top;
 }
@@ -267,8 +267,18 @@ td {
 th {
   background: var(--th-bg);
   color: var(--th-color);
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+tr {
+  transition: background 120ms ease;
+}
+
+tr:hover {
+  background: var(--button-hover-bg);
 }
 
 tr:last-child td {
@@ -335,12 +345,14 @@ tr:last-child td {
 
 .status-pill {
   display: inline-flex;
-  min-height: 28px;
+  min-height: 24px;
   align-items: center;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 750;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .status-pill.aplicado {
@@ -789,6 +801,23 @@ tr:last-child td {
   gap: 12px;
 }
 
+/* Top bar: version selector + compile button */
+.cv-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* CV theme row */
+.cv-theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .cv-editor-header {
   display: flex;
   align-items: center;
@@ -796,7 +825,8 @@ tr:last-child td {
   gap: 12px;
 }
 
-.cv-editor-header .theme-select-wrapper {
+.cv-editor-header .theme-select-wrapper,
+.cv-theme-row .theme-select-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -805,10 +835,19 @@ tr:last-child td {
   font-weight: 700;
 }
 
-.cv-editor-header select {
+.cv-editor-header select,
+.cv-top-bar select,
+.cv-theme-row select {
   width: auto;
   min-height: 34px;
   padding: 4px 8px;
+}
+
+.cv-autosave-hint {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  white-space: nowrap;
 }
 
 .cv-textarea {
@@ -922,4 +961,114 @@ tr:last-child td {
     height: 500px;
     min-height: auto;
   }
+
+  .cv-top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cv-theme-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Notes Live Preview */
+.notes-compose-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note-live-preview-box {
+  margin-top: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--surface);
+  font-size: 14px;
+  min-height: 120px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.note-live-preview-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+/* CV Version Management Bar */
+.cv-version-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cv-version-bar select {
+  min-width: 160px;
+  height: 38px;
+  font-weight: 700;
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.cv-version-bar button {
+  height: 38px;
+}
+
+/* Filter and Search Bar for applications */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search-wrapper {
+  max-width: 320px;
+  width: 100%;
+}
+
+.search-input {
+  min-height: 38px;
+}
+
+.filter-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 140ms ease;
+  min-height: 34px;
+}
+
+.filter-btn:hover {
+  background: var(--button-hover-bg);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.filter-btn.active:hover {
+  background: var(--primary-strong);
 }

@@ -4,8 +4,7 @@
  * - addColumnIfMissing branch when column is missing (db.ts line 101)
  * - actions.ts helper functions (formString, sanitizeFilename, readApplicationInput)
  */
-import { describe, it, expect, beforeEach } from "vitest";
-import { vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Database from "better-sqlite3";
 
 // ─── DB Migration Edge Cases ─────────────────────────────────────────────────

@@ -207,6 +207,42 @@ export async function deleteCvVersion(name: string): Promise<void> {
   }
 }
 
+export async function renameCvVersion(oldName: string, newName: string): Promise<{ success: boolean; error?: string }> {
+  ensureVersionsDir();
+  const sanitizedOld = oldName.replace(/[^a-zA-Z0-9_-]/g, "");
+  const sanitizedNew = newName.replace(/[^a-zA-Z0-9_-]/g, "");
+
+  if (sanitizedOld === "default") return { success: false, error: "No se puede renombrar la versión principal." };
+  if (!sanitizedNew) return { success: false, error: "El nuevo nombre es inválido." };
+  if (sanitizedOld === sanitizedNew) return { success: true };
+
+  const oldVersionPath = path.join(versionsDir, `${sanitizedOld}.yaml`);
+  const newVersionPath = path.join(versionsDir, `${sanitizedNew}.yaml`);
+
+  if (!fs.existsSync(oldVersionPath)) return { success: false, error: "La versión original no existe." };
+  if (fs.existsSync(newVersionPath)) return { success: false, error: "Ya existe una versión con ese nombre." };
+
+  try {
+    fs.renameSync(oldVersionPath, newVersionPath);
+
+    // Also rename associated output files if they exist
+    const oldPdfPath = path.join(outputDir, `${sanitizedOld}.pdf`);
+    const newPdfPath = path.join(outputDir, `${sanitizedNew}.pdf`);
+    if (fs.existsSync(oldPdfPath)) fs.renameSync(oldPdfPath, newPdfPath);
+
+    if (fs.existsSync(outputDir)) {
+      const pngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${sanitizedOld}_`) && f.endsWith(".png"));
+      for (const file of pngFiles) {
+        const suffix = file.substring(sanitizedOld.length); // gets "_1.png", etc
+        fs.renameSync(path.join(outputDir, file), path.join(outputDir, `${sanitizedNew}${suffix}`));
+      }
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Error al renombrar los archivos." };
+  }
+}
+
 export async function compileCv(name: string, yamlContent: string): Promise<{ success: boolean; error?: string; pageCount?: number }> {
   try {
     ensureVersionsDir();

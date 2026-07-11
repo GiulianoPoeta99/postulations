@@ -204,6 +204,39 @@ describe("deleteCvVersion", () => {
   });
 });
 
+describe("renameCvVersion", () => {
+  it("renames YAML, PDF, and PNG files", async () => {
+    const { saveCvVersion, renameCvVersion } = await import("@/app/actions");
+    const oldName = uniqueName();
+    const newName = uniqueName();
+    
+    await saveCvVersion(oldName, "data");
+    fs.mkdirSync(realOutputDir, { recursive: true });
+    fs.writeFileSync(path.join(realOutputDir, `${oldName}.pdf`), "pdf content");
+    fs.writeFileSync(path.join(realOutputDir, `${oldName}_1.png`), "png content");
+
+    const result = await renameCvVersion(oldName, newName);
+    expect(result.success).toBe(true);
+
+    // Old files should not exist
+    expect(fs.existsSync(path.join(realVersionsDir, `${oldName}.yaml`))).toBe(false);
+    expect(fs.existsSync(path.join(realOutputDir, `${oldName}.pdf`))).toBe(false);
+    expect(fs.existsSync(path.join(realOutputDir, `${oldName}_1.png`))).toBe(false);
+
+    // New files should exist
+    expect(fs.existsSync(path.join(realVersionsDir, `${newName}.yaml`))).toBe(true);
+    expect(fs.existsSync(path.join(realOutputDir, `${newName}.pdf`))).toBe(true);
+    expect(fs.existsSync(path.join(realOutputDir, `${newName}_1.png`))).toBe(true);
+  });
+
+  it("fails when trying to rename 'default'", async () => {
+    const { renameCvVersion } = await import("@/app/actions");
+    const result = await renameCvVersion("default", uniqueName());
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/principal/i);
+  });
+});
+
 describe("compileCv", () => {
   it("writes the YAML file before attempting to compile", async () => {
     const { compileCv } = await import("@/app/actions");

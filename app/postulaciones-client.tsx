@@ -20,6 +20,7 @@ import remarkGfm from "remark-gfm";
 import CodeMirror from '@uiw/react-codemirror';
 import { yaml } from '@codemirror/lang-yaml';
 import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode';
+import { wrappedLineIndent } from "codemirror-wrapped-line-indent";
 import { EditorView } from '@codemirror/view';
 
 import {
@@ -33,7 +34,8 @@ import {
   listCvVersions,
   getCvVersion,
   saveCvVersion,
-  deleteCvVersion
+  deleteCvVersion,
+  renameCvVersion
 } from "@/app/actions";
 import type { Application, ApplicationStatus } from "@/lib/db";
 
@@ -224,6 +226,9 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   const [activeVersion, setActiveVersion] = useState("default");
   const [showSaveAsModal, setShowSaveAsModal] = useState(false);
   const [saveAsName, setSaveAsName] = useState("");
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameTarget, setRenameTarget] = useState("");
+  const [newName, setNewName] = useState("");
   const [compileStatus, setCompileStatus] = useState<"idle" | "compiling" | "success" | "error">("idle");
   const [compileError, setCompileError] = useState("");
   const [previewVersion, setPreviewVersion] = useState(0);
@@ -339,12 +344,33 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
     setSaveAsName("");
   };
 
-  const handleDeleteVersion = async () => {
-    if (activeVersion === "default") return;
-    if (!confirm(`¿Eliminar la versión "${activeVersion}"?`)) return;
-    await deleteCvVersion(activeVersion);
-    setActiveVersion("default");
+  const handleDeleteVersion = async (versionToDelete: string) => {
+    if (versionToDelete === "default") return;
+    if (!confirm(`¿Eliminar la versión "${versionToDelete}"?`)) return;
+    await deleteCvVersion(versionToDelete);
+    if (activeVersion === versionToDelete) {
+      setActiveVersion("default");
+    }
     await loadVersions();
+  };
+
+  const handleRenameSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const sanitizedNewName = newName.replace(/[^a-zA-Z0-9_-]/g, "").trim();
+    if (!sanitizedNewName || sanitizedNewName === renameTarget) {
+      setShowRenameModal(false);
+      return;
+    }
+    const res = await renameCvVersion(renameTarget, sanitizedNewName);
+    if (res.success) {
+      await loadVersions();
+      if (activeVersion === renameTarget) {
+        setActiveVersion(sanitizedNewName);
+      }
+      setShowRenameModal(false);
+    } else {
+      alert(res.error || "Error al renombrar.");
+    }
   };
 
   // ----- Derived state -----
@@ -584,86 +610,79 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
         {/* ── CV TAB ── */}
         {activeTab === "cv" ? (
           <div className="cv-workspace">
-            {/* Editor panel */}
-            <div className="cv-editor-panel">
-              <div className="cv-top-bar">
-                {/* Version selector */}
-                <div className="cv-version-bar">
-                  <div className="cv-version-select-group">
-                    <span className="cv-version-label">Versión actual:</span>
-                    <select
-                      value={activeVersion}
-                      onChange={(e) => setActiveVersion(e.target.value)}
-                      title="Seleccionar versión del CV"
+            {/* Sidebar */}
+            <div className="cv-sidebar">
+              <div className="cv-sidebar-header">
+                <h3>Versiones</h3>
+                <button 
+                  className="icon-button" 
+                  onClick={() => { setSaveAsName(""); setShowSaveAsModal(true); }}
+                  title="Duplicar versión actual"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <div className="cv-version-list">
+                {cvVersions.map((v) => (
+                  <div key={v} className={`cv-version-item ${activeVersion === v ? "active" : ""}`}>
+                    <button 
+                      className="cv-version-name" 
+                      onClick={() => setActiveVersion(v)}
+                      title={`Seleccionar ${v}`}
                     >
-                      {cvVersions.map((v) => (
-                        <option key={v} value={v}>
-                          {v === "default" ? "default (principal)" : v}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="version-menu-container" ref={versionMenuRef}>
-                    <button
-                      className="secondary-button icon-only"
-                      type="button"
-                      onClick={() => setShowVersionMenu(!showVersionMenu)}
-                      title="Opciones de versión"
-                    >
-                      <MoreVertical size={15} aria-hidden="true" />
+                      <FileText size={14} aria-hidden="true" />
+                      <span>{v === "default" ? "default (principal)" : v}</span>
                     </button>
-                    {showVersionMenu && (
-                      <div className="version-dropdown-menu">
-                        <button
-                          className="dropdown-item"
-                          type="button"
-                          onClick={() => { 
-                            setShowVersionMenu(false); 
-                            setSaveAsName(""); 
-                            setShowSaveAsModal(true); 
-                          }}
+                    {v !== "default" && (
+                      <div className="cv-version-actions">
+                        <button 
+                          className="icon-button"
+                          title="Renombrar versión"
+                          onClick={() => { setRenameTarget(v); setNewName(v); setShowRenameModal(true); }}
                         >
-                          <Plus size={14} aria-hidden="true" />
-                          Duplicar Versión
+                          <Pencil size={12} />
                         </button>
-                        {activeVersion !== "default" && (
-                          <button
-                            className="dropdown-item danger"
-                            type="button"
-                            onClick={() => { 
-                              setShowVersionMenu(false); 
-                              handleDeleteVersion(); 
-                            }}
-                          >
-                            <Trash2 size={14} aria-hidden="true" />
-                            Eliminar Versión
-                          </button>
-                        )}
+                        <button 
+                          className="icon-button danger"
+                          title="Eliminar versión"
+                          onClick={() => handleDeleteVersion(v)}
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       </div>
                     )}
                   </div>
-                  <div className="cv-compile-inline">
-                    {compileStatus === "compiling" && (
-                      <span className="compile-status compiling" title="Compilando...">
-                        <span className="spinner-small" aria-hidden="true"></span>
-                      </span>
-                    )}
-                    {compileStatus === "success" && (
-                      <span className="compile-status success" title="¡Listo!">✓</span>
-                    )}
-                    {compileStatus === "error" && (
-                      <span className="compile-status error" title="Error">!</span>
-                    )}
-                    <button
-                      className="primary-button icon-only"
-                      type="button"
-                      onClick={handleCompile}
-                      disabled={compileStatus === "compiling"}
-                      title="Forzar Compilación"
-                    >
-                      <Play size={15} aria-hidden="true" />
-                    </button>
-                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Editor panel */}
+            <div className="cv-editor-panel">
+              <div className="cv-top-bar">
+                <div className="cv-top-bar-left">
+                  <span className="cv-version-label">Editando: {activeVersion === "default" ? "default (principal)" : activeVersion}</span>
+                </div>
+                <div className="cv-compile-inline">
+                  {compileStatus === "compiling" && (
+                    <span className="compile-status compiling" title="Compilando...">
+                      <span className="spinner-small" aria-hidden="true"></span>
+                    </span>
+                  )}
+                  {compileStatus === "success" && (
+                    <span className="compile-status success" title="¡Listo!">✓</span>
+                  )}
+                  {compileStatus === "error" && (
+                    <span className="compile-status error" title="Error">!</span>
+                  )}
+                  <button
+                    className="primary-button icon-only"
+                    type="button"
+                    onClick={handleCompile}
+                    disabled={compileStatus === "compiling"}
+                    title="Forzar Compilación"
+                  >
+                    <Play size={15} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
 
@@ -671,7 +690,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                 <CodeMirror
                   value={cvYaml}
                   height="100%"
-                  extensions={[yaml(), EditorView.lineWrapping]}
+                  extensions={[yaml(), EditorView.lineWrapping, wrappedLineIndent]}
                   theme={theme === "dark" ? vscodeDark : vscodeLight}
                   onChange={(value) => handleYamlChange(value)}
                   basicSetup={{
@@ -972,6 +991,31 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
               </button>
               <button className="primary-button" type="submit">
                 Guardar
+              </button>
+            </footer>
+          </form>
+        </Modal>
+      ) : null}
+
+      {showRenameModal ? (
+        <Modal title="Renombrar versión" onClose={() => setShowRenameModal(false)}>
+          <form onSubmit={handleRenameSubmit} className="modal-body">
+            <label className="field">
+              <span>Nuevo nombre para "{renameTarget}"</span>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
+                required
+                autoFocus
+              />
+            </label>
+            <footer className="modal-footer">
+              <button className="secondary-button" type="button" onClick={() => setShowRenameModal(false)}>
+                Cancelar
+              </button>
+              <button className="primary-button" type="submit">
+                Renombrar
               </button>
             </footer>
           </form>

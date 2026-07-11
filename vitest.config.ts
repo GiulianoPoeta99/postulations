@@ -16,8 +16,8 @@ export default defineConfig({
       reportsDirectory: "./coverage",
       include: [
         "lib/**/*.ts",
-        "app/actions.ts",
-        "app/api/**/*.ts",
+        "app/**/*.ts",
+        "app/**/*.tsx",
       ],
       exclude: [
         "**/*.d.ts",

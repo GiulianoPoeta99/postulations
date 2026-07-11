@@ -195,4 +195,79 @@ describe("PostulacionesClient", () => {
       expect(actions.updateNota).toHaveBeenCalledWith(1, expect.any(FormData));
     });
   });
+
+  // --- CV Tab Tests ---
+  
+  it("switches to CV tab and loads default version", async () => {
+    const user = userEvent.setup();
+    render(<PostulacionesClient applications={mockApplications} />);
+    
+    const cvTabBtn = screen.getByRole("tab", { name: /Editor de CVs/i });
+    await user.click(cvTabBtn);
+    
+    // Check if the getCvVersion was called
+    await waitFor(() => {
+      expect(actions.listCvVersions).toHaveBeenCalled();
+      expect(actions.getCvVersion).toHaveBeenCalledWith("default");
+    });
+    
+    // Check if mock codemirror has the value
+    const cm = await screen.findByTestId("mock-codemirror");
+    expect(cm).toHaveValue("cv: test");
+  });
+
+  it("triggers manual compile in CV tab", async () => {
+    const user = userEvent.setup();
+    // Use fake timers to bypass debounce or just click button
+    vi.mocked(actions.compileCv).mockResolvedValue({ success: true, pageCount: 1 });
+    render(<PostulacionesClient applications={mockApplications} />);
+    
+    await user.click(screen.getByRole("tab", { name: /Editor de CVs/i }));
+    
+    // Wait for load
+    await screen.findByTestId("mock-codemirror");
+    
+    // Click force compile button
+    const compileBtn = screen.getByTitle("Forzar Compilación");
+    await user.click(compileBtn);
+    
+    await waitFor(() => {
+      expect(actions.compileCv).toHaveBeenCalledWith("default", "cv: test");
+    });
+  });
+
+  it("handles compilation errors gracefully", async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.compileCv).mockResolvedValue({ success: false, error: "Syntax Error" });
+    render(<PostulacionesClient applications={mockApplications} />);
+    
+    await user.click(screen.getByRole("tab", { name: /Editor de CVs/i }));
+    await screen.findByTestId("mock-codemirror");
+    
+    await user.click(screen.getByTitle("Forzar Compilación"));
+    
+    // Error should be displayed
+    expect(await screen.findByText("Syntax Error")).toBeInTheDocument();
+  });
+
+  it("creates a new CV version via Save As", async () => {
+    const user = userEvent.setup();
+    render(<PostulacionesClient applications={mockApplications} />);
+    
+    await user.click(screen.getByRole("tab", { name: /Editor de CVs/i }));
+    await screen.findByTestId("mock-codemirror");
+    
+    await user.click(screen.getByRole("button", { name: /Guardar como/i }));
+    
+    const input = screen.getByPlaceholderText("Nombre de la versión...");
+    await user.type(input, "New Version");
+    
+    const saveBtn = screen.getByRole("button", { name: "Guardar", exact: true });
+    await user.click(saveBtn);
+    
+    await waitFor(() => {
+      expect(actions.saveCvVersion).toHaveBeenCalledWith("NewVersion", "cv: test");
+    });
+  });
 });
+

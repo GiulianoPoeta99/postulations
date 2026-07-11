@@ -22,98 +22,101 @@ test.describe("Notes CRUD", () => {
     await page.locator("table tbody tr").first().getByRole("button", { name: /\d/ }).first().click();
 
     await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByText(/notas?/i)).toBeVisible();
+    await expect(page.getByText(/Notas:/i)).toBeVisible();
+    await expect(page.getByText("Selecciona una nota o crea una nueva.")).toBeVisible();
   });
 
   test("should create a note and see it in the list", async ({ page }) => {
     await page.locator("table tbody tr").first().getByRole("button", { name: /\d/ }).first().click();
-
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    // Type in the compose box
-    await page.getByPlaceholder(/escribe markdown/i).fill("# My Test Note\n\nSome **bold** content.");
+    // Click 'Nueva Nota'
+    await page.getByTitle("Nueva Nota").click();
 
-    // Live preview should appear
-    await expect(page.getByText("Vista previa")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "My Test Note" })).toBeVisible();
+    // Wait for editor pane
+    await expect(page.getByPlaceholder("Título de la nota...")).toBeVisible();
+
+    // Fill title
+    await page.getByPlaceholder("Título de la nota...").fill("My Test Note");
+
+    // The CodeMirror input requires clicking and typing
+    const cm = page.locator(".cm-content");
+    await cm.click();
+    await page.keyboard.type("# Live Title\n\nSome **bold** content");
+
+    // Live preview should appear on the right
+    await expect(page.getByText("Vista previa")).not.toBeVisible(); // Not present anymore
+    await expect(page.locator(".markdown-note").getByRole("heading", { name: "Live Title" })).toBeVisible();
 
     // Submit
-    await page.getByRole("button", { name: "Agregar nota" }).click();
+    await page.getByRole("button", { name: "Guardar" }).click();
 
-    // Note should appear in the list
-    await expect(page.getByText("My Test Note")).toBeVisible();
+    // Note should appear in the sidebar list
+    await expect(page.locator(".note-sidebar-item-title").filter({ hasText: "My Test Note" })).toBeVisible();
   });
 
-  test("should edit an existing note with live preview", async ({ page }) => {
-    // Create a note first if there are none
+  test("should edit an existing note", async ({ page }) => {
     await page.locator("table tbody tr").first().getByRole("button", { name: /\d/ }).first().click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    // Check if there are notes; if not, create one
-    const hasNote = await page.locator(".note-item").count();
+    // Ensure a note exists
+    const hasNote = await page.locator(".note-sidebar-item").count();
     if (hasNote === 0) {
-      await page.getByPlaceholder(/escribe markdown/i).fill("Note to edit later");
-      await page.getByRole("button", { name: "Agregar nota" }).click();
+      await page.getByTitle("Nueva Nota").click();
+      await page.getByPlaceholder("Título de la nota...").fill("To Edit");
+      await page.locator(".cm-content").click();
+      await page.keyboard.type("Initial content");
+      await page.getByRole("button", { name: "Guardar" }).click();
+      await expect(page.locator(".note-sidebar-item-title").filter({ hasText: "To Edit" })).toBeVisible();
     }
 
-    // Click pencil icon on first note
-    await page.locator(".note-item").first().getByTitle("Editar nota").click();
+    // Click the note in the sidebar
+    await page.locator(".note-sidebar-item").first().click();
 
-    // Editor should appear
-    await expect(page.locator(".note-item-editing")).toBeVisible();
-
-    // Type something new to trigger live preview
-    const editTextarea = page.locator(".note-item-editing textarea");
-    await editTextarea.fill("## Edited note content");
-
-    // Wait for live preview box
-    await expect(page.locator(".note-item-editing .note-live-preview-box")).toBeVisible();
+    // Change title
+    await page.getByPlaceholder("Título de la nota...").fill("Edited Title");
 
     // Save
-    await page.locator(".note-item-editing").getByRole("button", { name: "Guardar" }).click();
+    await page.getByRole("button", { name: "Guardar" }).click();
 
-    // Check edited content appears
-    await expect(page.getByText("Edited note content")).toBeVisible();
+    // Sidebar should reflect change
+    await expect(page.locator(".note-sidebar-item-title").filter({ hasText: "Edited Title" })).toBeVisible();
   });
 
   test("should delete a note", async ({ page }) => {
     await page.locator("table tbody tr").first().getByRole("button", { name: /\d/ }).first().click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    // Ensure at least one note exists
-    const hasNote = await page.locator(".note-item").count();
+    // Ensure a note exists
+    const hasNote = await page.locator(".note-sidebar-item").count();
     if (hasNote === 0) {
-      await page.getByPlaceholder(/escribe markdown/i).fill("Note to delete");
-      await page.getByRole("button", { name: "Agregar nota" }).click();
-      await expect(page.locator(".note-item")).toHaveCount(1);
+      await page.getByTitle("Nueva Nota").click();
+      await page.getByPlaceholder("Título de la nota...").fill("To Delete");
+      await page.locator(".cm-content").click();
+      await page.keyboard.type("Content");
+      await page.getByRole("button", { name: "Guardar" }).click();
+      await expect(page.locator(".note-sidebar-item-title").filter({ hasText: "To Delete" })).toBeVisible();
     }
 
-    const noteCountBefore = await page.locator(".note-item").count();
+    // Auto-accept the confirmation dialog
+    page.on('dialog', dialog => dialog.accept());
+
+    const noteCountBefore = await page.locator(".note-sidebar-item").count();
 
     // Click the trash icon on the first note
-    await page.locator(".note-item").first().getByTitle("Eliminar nota").click();
+    await page.locator(".note-sidebar-item").first().getByTitle("Eliminar").click();
 
     // Note count should decrease
-    await expect(page.locator(".note-item")).toHaveCount(noteCountBefore - 1);
+    await expect(page.locator(".note-sidebar-item")).toHaveCount(noteCountBefore - 1);
   });
 
   test("should close notes modal", async ({ page }) => {
     await page.locator("table tbody tr").first().getByRole("button", { name: /\d/ }).first().click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    await page.getByRole("button", { name: "Cerrar" }).click();
+    // Close button (X icon) or click outside
+    await page.locator(".modal-close").click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
   });
-
-  test("note compose area clears after submitting", async ({ page }) => {
-    await page.locator("table tbody tr").first().getByRole("button", { name: /\d/ }).first().click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-
-    const textarea = page.getByPlaceholder(/escribe markdown/i);
-    await textarea.fill("This will be cleared");
-    await page.getByRole("button", { name: "Agregar nota" }).click();
-
-    // Textarea should be empty after submit
-    await expect(textarea).toHaveValue("");
-  });
 });
+

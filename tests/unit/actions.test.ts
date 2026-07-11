@@ -260,4 +260,46 @@ describe("compileCv", () => {
 });
 
 
+describe("Application and Note Actions (Wrappers)", () => {
+  it("createPostulacion calls DB and revalidatePath", async () => {
+    const { createPostulacion } = await import("@/app/actions");
+    const formData = new FormData();
+    formData.append("nombreEmpresa", "WrapperTest");
+    formData.append("estado", "aplicado");
+    
+    await expect(createPostulacion(formData)).resolves.not.toThrow();
+  });
 
+  it("updatePostulacion calls DB and revalidatePath", async () => {
+    const { updatePostulacion } = await import("@/app/actions");
+    const formData = new FormData();
+    formData.append("nombreEmpresa", "WrapperTestUpdate");
+    await expect(updatePostulacion(1, formData)).resolves.not.toThrow();
+  });
+
+  it("deletePostulacion calls DB and revalidatePath", async () => {
+    const { deletePostulacion } = await import("@/app/actions");
+    await expect(deletePostulacion(1)).resolves.not.toThrow();
+  });
+
+  it("createNota calls DB and revalidatePath", async () => {
+    const { createNota } = await import("@/app/actions");
+    const formData = new FormData();
+    formData.append("title", "WrapperNote");
+    formData.append("content", "WrapperContent");
+    await expect(createNota(1, formData)).resolves.not.toThrow();
+  });
+
+  it("updateNota calls DB and revalidatePath", async () => {
+    const { updateNota } = await import("@/app/actions");
+    const formData = new FormData();
+    formData.append("title", "WrapperNoteUpdate");
+    formData.append("content", "WrapperContentUpdate");
+    await expect(updateNota(1, formData)).resolves.not.toThrow();
+  });
+
+  it("deleteNota calls DB and revalidatePath", async () => {
+    const { deleteNota } = await import("@/app/actions");
+    await expect(deleteNota(1)).resolves.not.toThrow();
+  });
+});

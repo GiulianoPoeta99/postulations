@@ -441,9 +441,14 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
 
   // ----- Helpers -----
 
+  function openModal(state: ModalState) {
+    setModal(state);
+    setError("");
+  }
+
   function closeModal() {
     setModal(null);
-    setEditingNoteId(null);
+    setActiveNoteId(null);
     setError("");
   }
 
@@ -485,7 +490,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
             <div className="counter" aria-label={`${applications.length} postulaciones`}>
               {applications.length}
             </div>
-            <button className="primary-button" type="button" onClick={() => setModal({ type: "create" })}>
+            <button className="primary-button" type="button" onClick={() => openModal({ type: "create" })}>
               <Plus size={16} aria-hidden="true" />
               Nueva
             </button>
@@ -611,7 +616,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                                 setNoteEditingTitle("Nueva Nota");
                                 setNoteEditingContent("");
                               }
-                              setModal({ type: "notes", applicationId: application.id });
+                              openModal({ type: "notes", applicationId: application.id });
                             }}
                           >
                             <MessageSquareText size={15} aria-hidden="true" />
@@ -626,7 +631,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                             <button
                               className="text-button"
                               type="button"
-                              onClick={() => setModal({ type: "previewCv", applicationId: application.id })}
+                              onClick={() => openModal({ type: "previewCv", applicationId: application.id })}
                             >
                               <FileText size={15} aria-hidden="true" />
                               Ver CV
@@ -640,7 +645,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                             <button
                               className="icon-button"
                               type="button"
-                              onClick={() => setModal({ type: "edit", applicationId: application.id })}
+                              onClick={() => openModal({ type: "edit", applicationId: application.id })}
                               title="Editar"
                             >
                               <Pencil size={16} aria-hidden="true" />
@@ -649,7 +654,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                             <button
                               className="icon-button danger"
                               type="button"
-                              onClick={() => setModal({ type: "delete", applicationId: application.id })}
+                              onClick={() => openModal({ type: "delete", applicationId: application.id })}
                               title="Eliminar"
                             >
                               <Trash2 size={16} aria-hidden="true" />

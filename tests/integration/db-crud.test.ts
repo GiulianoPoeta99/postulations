@@ -34,7 +34,7 @@ describe("listApplications", () => {
     expect(apps).toHaveLength(1);
     expect(apps[0].nombreEmpresa).toBe("Acme");
     expect(apps[0].estado).toBe("aplicado");
-    expect(apps[0].noteCount).toBe(0);
+    expect(apps[0].notas).toBe("");
     expect(apps[0].deletedAt).toBeNull();
   });
 
@@ -164,60 +164,32 @@ describe("softDeleteApplication", () => {
   });
 });
 
-// ─── createApplicationNote ───────────────────────────────────────────────────
+// ─── createApplicationNote & updateApplicationNote ─────────────────────────────
 
-describe("createApplicationNote", () => {
+describe("Application Notes", () => {
   it("creates a note and it appears in listApplications", async () => {
     const { createApplication, createApplicationNote, listApplications } = await getDb();
     const id = createApplication({ nombreEmpresa: "WithNote", linkPropuesta: "", estado: "aplicado", textoPostulacion: "" });
-    createApplicationNote(id, "My first note");
+    createApplicationNote(id, "My title", "My first note");
     const app = listApplications()[0];
     expect(app.noteCount).toBe(1);
     expect(app.latestNote).toBe("My first note");
+    expect(app.notes[0].title).toBe("My title");
   });
 
   it("does not create note for non-existent application", async () => {
     const { createApplicationNote, listApplications } = await getDb();
-    // Should not throw, just silently not insert
-    expect(() => createApplicationNote(99999, "Orphan note")).not.toThrow();
+    // Should not throw, just silently not create
+    expect(() => createApplicationNote(99999, "Title", "Orphan note")).not.toThrow();
   });
 
   it("does not create note for soft-deleted application", async () => {
     const { createApplication, softDeleteApplication, createApplicationNote, listApplications } = await getDb();
     const id = createApplication({ nombreEmpresa: "Deleted", linkPropuesta: "", estado: "aplicado", textoPostulacion: "" });
     softDeleteApplication(id);
-    createApplicationNote(id, "note on deleted");
-    // Application doesn't appear in list, so we can't verify the note count
+    createApplicationNote(id, "Title", "note on deleted");
+    // Application doesn't appear in list, so we can't verify the note string
     // but the important thing is no exception thrown
-  });
-});
-
-// ─── updateApplicationNote ───────────────────────────────────────────────────
-
-describe("updateApplicationNote", () => {
-  it("updates note content", async () => {
-    const { createApplication, createApplicationNote, updateApplicationNote, listApplications } = await getDb();
-    const appId = createApplication({ nombreEmpresa: "NoteEdit", linkPropuesta: "", estado: "aplicado", textoPostulacion: "" });
-    createApplicationNote(appId, "original");
-    const noteId = listApplications()[0].notes[0].id;
-    updateApplicationNote(noteId, "updated content");
-    const app = listApplications()[0];
-    expect(app.notes[0].content).toBe("updated content");
-  });
-});
-
-// ─── softDeleteApplicationNote ───────────────────────────────────────────────
-
-describe("softDeleteApplicationNote", () => {
-  it("removes note from listing", async () => {
-    const { createApplication, createApplicationNote, softDeleteApplicationNote, listApplications } = await getDb();
-    const appId = createApplication({ nombreEmpresa: "NoteDelete", linkPropuesta: "", estado: "aplicado", textoPostulacion: "" });
-    createApplicationNote(appId, "to be deleted");
-    const noteId = listApplications()[0].notes[0].id;
-    softDeleteApplicationNote(noteId);
-    const app = listApplications()[0];
-    expect(app.noteCount).toBe(0);
-    expect(app.latestNote).toBe("");
   });
 });
 

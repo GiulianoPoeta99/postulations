@@ -19,17 +19,19 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import CodeMirror from '@uiw/react-codemirror';
 import { yaml } from '@codemirror/lang-yaml';
+import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
+import { languages } from '@codemirror/language-data';
 import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode';
 import { wrappedLineIndent } from "codemirror-wrapped-line-indent";
 import { EditorView } from '@codemirror/view';
 
 import {
-  createNota,
   createPostulacion,
-  deleteNota,
   deletePostulacion,
-  updateNota,
   updatePostulacion,
+  createNota,
+  updateNota,
+  deleteNota,
   compileCv,
   listCvVersions,
   getCvVersion,
@@ -201,16 +203,18 @@ function Modal({
   title,
   onClose,
   children,
-  wide = false
+  wide = false,
+  giant = false
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  giant?: boolean;
 }) {
   return (
     <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <section className={`modal-card ${wide ? "modal-card-wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+      <section className={`modal-card ${wide ? "modal-card-wide" : ""} ${giant ? "modal-card-giant" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
         <header className="modal-header">
           <h2>{title}</h2>
           <button className="icon-button" type="button" onClick={onClose} title="Cerrar">
@@ -226,7 +230,6 @@ function Modal({
 
 export function PostulacionesClient({ applications }: PostulacionesClientProps) {
   const [modal, setModal] = useState<ModalState>(null);
-  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -252,9 +255,10 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   const [showVersionMenu, setShowVersionMenu] = useState(false);
   const versionMenuRef = useRef<HTMLDivElement>(null);
 
-  // Notes live preview states
-  const [noteComposeText, setNoteComposeText] = useState("");
-  const [noteEditingText, setNoteEditingText] = useState("");
+  // Notes states
+  const [activeNoteId, setActiveNoteId] = useState<number | "new" | null>(null);
+  const [noteEditingTitle, setNoteEditingTitle] = useState("");
+  const [noteEditingContent, setNoteEditingContent] = useState("");
 
   // Ref to avoid stale closure in debounce
   const cvYamlRef = useRef(cvYaml);
@@ -598,13 +602,20 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                             className="text-button"
                             type="button"
                             onClick={() => {
-                              setEditingNoteId(null);
-                              setNoteComposeText("");
+                              if (application.notes && application.notes.length > 0) {
+                                setActiveNoteId(application.notes[0].id);
+                                setNoteEditingTitle(application.notes[0].title);
+                                setNoteEditingContent(application.notes[0].content);
+                              } else {
+                                setActiveNoteId("new");
+                                setNoteEditingTitle("Nueva Nota");
+                                setNoteEditingContent("");
+                              }
                               setModal({ type: "notes", applicationId: application.id });
                             }}
                           >
                             <MessageSquareText size={15} aria-hidden="true" />
-                            {application.noteCount}
+                            {application.noteCount > 0 ? "Ver notas" : "Agregar notas"}
                           </button>
                           {application.latestNote ? (
                             <p className="note-preview">{markdownTextPreview(application.latestNote)}</p>
@@ -887,146 +898,133 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
       ) : null}
 
       {modal?.type === "notes" && activeApplication ? (
-        <Modal title={`Notas: ${activeApplication.nombreEmpresa}`} onClose={closeModal} wide>
-          <div className="modal-body notes-modal-body">
-            <section className="notes-main">
-              <header className="notes-toolbar">
-                <div>
-                  <strong>{activeApplication.noteCount}</strong>
-                  <span>{activeApplication.noteCount === 1 ? " nota" : " notas"}</span>
-                </div>
-                {editingNoteId ? (
-                  <button
-                    className="secondary-button compact-button"
-                    type="button"
-                    onClick={() => setEditingNoteId(null)}
-                  >
-                    Cancelar edición
-                  </button>
-                ) : null}
-              </header>
-
-              <div className="notes-list">
-                {activeApplication.notes.length === 0 ? (
-                  <p className="empty-notes">Sin notas</p>
-                ) : (
-                  activeApplication.notes.map((note) => {
-                    const isEditing = editingNoteId === note.id;
-
-                    if (isEditing) {
-                      return (
-                        <form
-                          action={runAction(updateNota.bind(null, note.id), () => setEditingNoteId(null))}
-                          className="note-item note-item-editing"
-                          key={note.id}
-                        >
-                          <div className="note-item-header">
-                            <span>{note.createdAt}</span>
-                            <div className="row-actions">
-                              <button
-                                className="secondary-button compact-button"
-                                type="button"
-                                onClick={() => setEditingNoteId(null)}
-                              >
-                                Cancelar
-                              </button>
-                              <button className="primary-button compact-button" type="submit" disabled={pending}>
-                                <Save size={15} aria-hidden="true" />
-                                Guardar
-                              </button>
-                            </div>
-                          </div>
-                          <textarea
-                            name="content"
-                            rows={10}
-                            value={noteEditingText}
-                            onChange={(e) => setNoteEditingText(e.target.value)}
-                            required
-                          />
-                          {noteEditingText.trim() && (
-                            <div className="note-live-preview-box">
-                              <div className="note-live-preview-title">Vista previa</div>
-                              <MarkdownNote content={noteEditingText} />
-                            </div>
-                          )}
-                        </form>
-                      );
-                    }
-
-                    return (
-                      <article className="note-item" key={note.id}>
-                        <div className="note-item-header">
-                          <span>{note.createdAt}</span>
-                          <div className="row-actions">
-                            <button
-                              className="icon-button"
-                              type="button"
-                              onClick={() => {
-                                setEditingNoteId(note.id);
-                                setNoteEditingText(note.content);
-                              }}
-                              title="Editar nota"
-                            >
-                              <Pencil size={16} aria-hidden="true" />
-                              <span className="sr-only">Editar nota</span>
-                            </button>
-                            <form action={runAction(async () => deleteNota(note.id))}>
-                              <button
-                                className="icon-button danger"
-                                type="submit"
-                                disabled={pending}
-                                title="Eliminar nota"
-                              >
-                                <Trash2 size={16} aria-hidden="true" />
-                                <span className="sr-only">Eliminar nota</span>
-                              </button>
-                            </form>
-                          </div>
-                        </div>
-                        <MarkdownNote content={note.content} />
-                      </article>
-                    );
-                  })
-                )}
+        <Modal title={`Notas: ${activeApplication.nombreEmpresa}`} onClose={closeModal} giant>
+          <div className="modal-body notes-workspace-giant">
+            <div className="notes-sidebar-giant">
+              <div className="notes-sidebar-header">
+                <h3>Historial</h3>
+                <button
+                  className="icon-button"
+                  onClick={() => {
+                    setActiveNoteId("new");
+                    setNoteEditingTitle("Nueva Nota");
+                    setNoteEditingContent("");
+                  }}
+                  title="Nueva Nota"
+                >
+                  <Plus size={16} />
+                </button>
               </div>
-            </section>
-
-            <aside className="notes-compose">
-              <form
-                action={runAction(createNota.bind(null, activeApplication.id), () => setNoteComposeText(""))}
-                className="note-create"
-                key={`create-note-${activeApplication.id}-${activeApplication.noteCount}`}
-              >
-                <label className="field">
-                  <span>Nueva nota</span>
-                  <textarea
-                    name="content"
-                    rows={8}
-                    placeholder="Escribe Markdown..."
-                    required
-                    value={noteComposeText}
-                    onChange={(e) => setNoteComposeText(e.target.value)}
-                  />
-                </label>
-                {noteComposeText.trim() && (
-                  <div className="note-live-preview-box">
-                    <div className="note-live-preview-title">Vista previa</div>
-                    <MarkdownNote content={noteComposeText} />
+              <div className="notes-sidebar-list">
+                {activeApplication.notes.map((note) => (
+                  <div 
+                    key={note.id} 
+                    className={`note-sidebar-item ${activeNoteId === note.id ? "active" : ""}`}
+                    onClick={() => {
+                      setActiveNoteId(note.id);
+                      setNoteEditingTitle(note.title);
+                      setNoteEditingContent(note.content);
+                    }}
+                  >
+                    <div className="note-sidebar-item-info">
+                      <span className="note-sidebar-item-title">{note.title || "Sin título"}</span>
+                      <span className="note-sidebar-item-date">
+                        {new Date(note.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <button
+                      className="icon-button danger"
+                      style={{ width: 24, height: 24, padding: 0 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm("¿Estás seguro de que deseas eliminar esta nota?")) {
+                          runAction(async () => {
+                            await deleteNota(note.id);
+                            if (activeNoteId === note.id) {
+                              setActiveNoteId(null);
+                            }
+                          }, () => {})();
+                        }
+                      }}
+                      title="Eliminar"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+                {activeApplication.notes.length === 0 && activeNoteId !== "new" && (
+                  <div style={{ padding: 16, color: 'var(--muted)', fontSize: 13, textAlign: 'center' }}>
+                    No hay notas.
                   </div>
                 )}
-                <button className="primary-button" type="submit" disabled={pending}>
-                  <Plus size={16} aria-hidden="true" />
-                  Agregar nota
-                </button>
-              </form>
-            </aside>
+              </div>
+            </div>
 
-            {error ? <p className="form-error notes-error">{error}</p> : null}
-            <footer className="modal-footer notes-footer">
-              <button className="secondary-button" type="button" onClick={closeModal}>
-                Cerrar
-              </button>
-            </footer>
+            {activeNoteId !== null ? (
+              <form 
+                className="notes-editor-split"
+                action={runAction(async (formData: FormData) => {
+                  if (activeNoteId === "new") {
+                    await createNota(activeApplication.id, formData);
+                    // Reset activeNoteId after create to let it select the new note if possible,
+                    // but for simplicity we'll just let it refresh and we can clear state or close
+                    setActiveNoteId(null);
+                  } else {
+                    await updateNota(activeNoteId, formData);
+                  }
+                }, () => {})}
+              >
+                <div className="notes-editor-split-header">
+                  <input
+                    name="title"
+                    className="notes-editor-split-title-input"
+                    value={noteEditingTitle}
+                    onChange={(e) => setNoteEditingTitle(e.target.value)}
+                    placeholder="Título de la nota..."
+                    required
+                  />
+                  <input type="hidden" name="content" value={noteEditingContent} />
+                  <button className="primary-button" type="submit" disabled={pending}>
+                    <Save size={16} />
+                    Guardar
+                  </button>
+                </div>
+                <div className="notes-split-panes">
+                  <div className="notes-split-pane-left">
+                    <CodeMirror
+                      value={noteEditingContent}
+                      height="100%"
+                      theme={theme === "dark" ? vscodeDark : vscodeLight}
+                      extensions={[
+                        markdown({ base: markdownLanguage, codeLanguages: languages }),
+                        EditorView.lineWrapping,
+                        wrappedLineIndent
+                      ]}
+                      onChange={(value) => setNoteEditingContent(value)}
+                      style={{ fontSize: "14px", height: "100%" }}
+                      basicSetup={{
+                        lineNumbers: true,
+                        highlightActiveLineGutter: true,
+                        foldGutter: true,
+                        tabSize: 2,
+                      }}
+                    />
+                  </div>
+                  <div className="notes-split-pane-right">
+                    <div className="markdown-note">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {noteEditingContent || "*Vista previa...*"}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+                {error && <p className="form-error" style={{ margin: '8px 16px' }}>{error}</p>}
+              </form>
+            ) : (
+              <div className="notes-editor-split" style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <p style={{ color: 'var(--muted)' }}>Selecciona una nota o crea una nueva.</p>
+              </div>
+            )}
           </div>
         </Modal>
       ) : null}

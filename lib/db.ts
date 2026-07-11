@@ -9,9 +9,11 @@ export type ApplicationStatus = (typeof applicationStatuses)[number];
 export type ApplicationNote = {
   id: number;
   postulacionId: number;
+  title: string;
   content: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
 };
 
 export type Application = {
@@ -23,6 +25,7 @@ export type Application = {
   cvFilename: string;
   cvStoredName: string;
   cvVersion: string;
+  notas: string;
   noteCount: number;
   latestNote: string;
   notes: ApplicationNote[];
@@ -56,14 +59,19 @@ type ApplicationRow = {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  note_count: number;
+  latest_note: string;
+  notes_json: string;
 };
 
 type ApplicationNoteRow = {
   id: number;
   postulacion_id: number;
+  title: string;
   content: string;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 };
 
 type CvFileRow = {
@@ -225,20 +233,13 @@ function migrateDatabase(database: Database.Database) {
     CREATE TABLE IF NOT EXISTS application_notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       postulacion_id INTEGER NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
       content TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       deleted_at TEXT DEFAULT NULL,
       FOREIGN KEY (postulacion_id) REFERENCES postulaciones(id) ON DELETE CASCADE
     );
-
-    CREATE TRIGGER IF NOT EXISTS postulaciones_updated_at
-    AFTER UPDATE ON postulaciones
-    FOR EACH ROW
-    WHEN NEW.updated_at = OLD.updated_at
-    BEGIN
-      UPDATE postulaciones SET updated_at = datetime('now') WHERE id = OLD.id;
-    END;
 
     CREATE TRIGGER IF NOT EXISTS application_notes_updated_at
     AFTER UPDATE ON application_notes
@@ -247,16 +248,17 @@ function migrateDatabase(database: Database.Database) {
     BEGIN
       UPDATE application_notes SET updated_at = datetime('now') WHERE id = OLD.id;
     END;
+  `);
+  
+  addColumnIfMissing(database, "application_notes", "title", "TEXT NOT NULL DEFAULT ''");
 
-    INSERT INTO application_notes (postulacion_id, content)
-    SELECT p.id, p.notas
+  // Migration: move combined notes back to application_notes if it doesn't have any
+  database.exec(`
+    INSERT INTO application_notes (postulacion_id, title, content)
+    SELECT id, 'Nota Histórica', notas
     FROM postulaciones p
-    WHERE trim(COALESCE(p.notas, '')) <> ''
-      AND NOT EXISTS (
-        SELECT 1
-        FROM application_notes n
-        WHERE n.postulacion_id = p.id
-      );
+    WHERE p.notas != '' 
+      AND NOT EXISTS (SELECT 1 FROM application_notes an WHERE an.postulacion_id = p.id)
   `);
 }
 
@@ -267,17 +269,25 @@ if (process.env.NODE_ENV !== "production") {
   globalThis.postulacionesDb = db;
 }
 
-function mapNote(row: ApplicationNoteRow): ApplicationNote {
-  return {
-    id: row.id,
-    postulacionId: row.postulacion_id,
-    content: row.content,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  };
-}
+function mapApplication(row: ApplicationRow): Application {
+  let parsedNotes: ApplicationNote[] = [];
+  if (row.notes_json) {
+    try {
+      const notesArray = JSON.parse(row.notes_json);
+      parsedNotes = notesArray.map((n: any) => ({
+        id: n.id,
+        postulacionId: n.postulacion_id,
+        title: n.title,
+        content: n.content,
+        createdAt: n.created_at,
+        updatedAt: n.updated_at,
+        deletedAt: n.deleted_at
+      }));
+    } catch {
+      // Return empty array if JSON is somehow invalid
+    }
+  }
 
-function mapApplication(row: ApplicationRow, notes: ApplicationNote[]): Application {
   return {
     id: row.id,
     nombreEmpresa: row.nombre_empresa,
@@ -287,9 +297,10 @@ function mapApplication(row: ApplicationRow, notes: ApplicationNote[]): Applicat
     cvFilename: row.cv_filename,
     cvStoredName: row.cv_stored_name,
     cvVersion: row.cv_version,
-    noteCount: notes.length,
-    latestNote: notes[0]?.content ?? "",
-    notes,
+    notas: row.notas ?? "",
+    noteCount: row.note_count ?? 0,
+    latestNote: row.latest_note ?? "",
+    notes: parsedNotes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at
@@ -314,45 +325,55 @@ export function listApplications(): Application[] {
     .prepare(
       `
       SELECT
-        id,
-        nombre_empresa,
-        link_propuesta,
-        estado,
-        texto_postulacion,
-        cv_filename,
-        cv_stored_name,
-        cv_version,
-        created_at,
-        updated_at,
-        deleted_at
-      FROM postulaciones
-      WHERE deleted_at IS NULL
-      ORDER BY id DESC
+        p.id,
+        p.nombre_empresa,
+        p.link_propuesta,
+        p.estado,
+        p.texto_postulacion,
+        p.cv_filename,
+        p.cv_stored_name,
+        p.cv_version,
+        p.notas,
+        p.created_at,
+        p.updated_at,
+        p.deleted_at,
+        COUNT(n.id) as note_count,
+        COALESCE(
+          (SELECT content 
+           FROM application_notes 
+           WHERE postulacion_id = p.id AND deleted_at IS NULL 
+           ORDER BY updated_at DESC LIMIT 1), 
+          ''
+        ) as latest_note,
+        COALESCE(
+          (SELECT json_group_array(
+             json_object(
+               'id', id,
+               'postulacion_id', postulacion_id,
+               'title', title,
+               'content', content,
+               'created_at', created_at,
+               'updated_at', updated_at,
+               'deleted_at', deleted_at
+             )
+           ) 
+           FROM (
+             SELECT * FROM application_notes 
+             WHERE postulacion_id = p.id AND deleted_at IS NULL 
+             ORDER BY updated_at DESC
+           )),
+          '[]'
+        ) as notes_json
+      FROM postulaciones p
+      LEFT JOIN application_notes n ON p.id = n.postulacion_id AND n.deleted_at IS NULL
+      WHERE p.deleted_at IS NULL
+      GROUP BY p.id
+      ORDER BY p.id DESC
     `
     )
     .all() as ApplicationRow[];
 
-  const noteRows = db
-    .prepare(
-      `
-      SELECT n.id, n.postulacion_id, n.content, n.created_at, n.updated_at
-      FROM application_notes n
-      INNER JOIN postulaciones p ON p.id = n.postulacion_id
-      WHERE n.deleted_at IS NULL
-        AND p.deleted_at IS NULL
-      ORDER BY n.created_at DESC, n.id DESC
-    `
-    )
-    .all() as ApplicationNoteRow[];
-
-  const notesByApplication = new Map<number, ApplicationNote[]>();
-  for (const row of noteRows) {
-    const notes = notesByApplication.get(row.postulacion_id) ?? [];
-    notes.push(mapNote(row));
-    notesByApplication.set(row.postulacion_id, notes);
-  }
-
-  return rows.map((row) => mapApplication(row, notesByApplication.get(row.id) ?? []));
+  return rows.map((row) => mapApplication(row));
 }
 
 export function createApplication(input: ApplicationInput, cv?: CvInput | null): number {
@@ -423,30 +444,28 @@ export function softDeleteApplication(id: number): void {
   ).run(id);
 }
 
-export function createApplicationNote(postulacionId: number, content: string): void {
+export function createApplicationNote(postulacionId: number, title: string, content: string): void {
   db.prepare(
     `
-      INSERT INTO application_notes (postulacion_id, content)
-      SELECT @postulacionId, @content
+      INSERT INTO application_notes (postulacion_id, title, content)
+      SELECT @postulacionId, @title, @content
       WHERE EXISTS (
-        SELECT 1
-        FROM postulaciones
-        WHERE id = @postulacionId
-          AND deleted_at IS NULL
+        SELECT 1 FROM postulaciones
+        WHERE id = @postulacionId AND deleted_at IS NULL
       )
     `
-  ).run({ postulacionId, content });
+  ).run({ postulacionId, title, content });
 }
 
-export function updateApplicationNote(id: number, content: string): void {
+export function updateApplicationNote(id: number, title: string, content: string): void {
   db.prepare(
     `
       UPDATE application_notes
-      SET content = @content
+      SET title = @title, content = @content
       WHERE id = @id
         AND deleted_at IS NULL
     `
-  ).run({ id, content });
+  ).run({ id, title, content });
 }
 
 export function softDeleteApplicationNote(id: number): void {

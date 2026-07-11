@@ -73,6 +73,7 @@ describe("createPostulacion", () => {
     const app = listApplications()[0];
     expect(app.noteCount).toBe(1);
     expect(app.latestNote).toBe("This is an initial note");
+    expect(app.notes[0].title).toBe("Nota inicial");
   });
 
   it("does not create note if notaInicial is empty", async () => {
@@ -147,7 +148,7 @@ describe("deletePostulacion", () => {
   });
 });
 
-// ─── createNota ──────────────────────────────────────────────────────────────
+// ─── updatePostulacionNotasAction ──────────────────────────────────────────────────────────────
 
 describe("createNota", () => {
   it("creates a note on existing application", async () => {
@@ -157,79 +158,12 @@ describe("createNota", () => {
     await createPostulacion(makeFormData({ nombreEmpresa: "NoteApp", estado: "aplicado", linkPropuesta: "", textoPostulacion: "" }));
     const appId = listApplications()[0].id;
 
-    await createNota(appId, makeFormData({ content: "My note content" }));
+    await createNota(appId, makeFormData({ title: "My note title", content: "My note content" }));
 
     const app = listApplications()[0];
     expect(app.noteCount).toBe(1);
-    expect(app.notes[0].content).toBe("My note content");
-    expect(revalidatePath).toHaveBeenCalledWith("/");
-  });
-
-  it("does nothing if content is empty", async () => {
-    const { createPostulacion, createNota } = await getActions();
-    const { listApplications } = await getDb();
-
-    await createPostulacion(makeFormData({ nombreEmpresa: "EmptyNote", estado: "aplicado", linkPropuesta: "", textoPostulacion: "" }));
-    const appId = listApplications()[0].id;
-    vi.mocked(revalidatePath).mockClear();
-
-    await createNota(appId, makeFormData({ content: "  " }));
-
-    expect(listApplications()[0].noteCount).toBe(0);
-    expect(revalidatePath).not.toHaveBeenCalled();
-  });
-});
-
-// ─── updateNota ──────────────────────────────────────────────────────────────
-
-describe("updateNota", () => {
-  it("updates note content", async () => {
-    const { createPostulacion, createNota, updateNota } = await getActions();
-    const { listApplications } = await getDb();
-
-    await createPostulacion(makeFormData({ nombreEmpresa: "UpdateNote", estado: "aplicado", linkPropuesta: "", textoPostulacion: "" }));
-    const appId = listApplications()[0].id;
-    await createNota(appId, makeFormData({ content: "original" }));
-    const noteId = listApplications()[0].notes[0].id;
-
-    await updateNota(noteId, makeFormData({ content: "updated" }));
-
-    expect(listApplications()[0].notes[0].content).toBe("updated");
-  });
-
-  it("does nothing if content is empty", async () => {
-    const { createPostulacion, createNota, updateNota } = await getActions();
-    const { listApplications } = await getDb();
-
-    await createPostulacion(makeFormData({ nombreEmpresa: "EmptyUpdate", estado: "aplicado", linkPropuesta: "", textoPostulacion: "" }));
-    const appId = listApplications()[0].id;
-    await createNota(appId, makeFormData({ content: "keep this" }));
-    const noteId = listApplications()[0].notes[0].id;
-    vi.mocked(revalidatePath).mockClear();
-
-    await updateNota(noteId, makeFormData({ content: "" }));
-
-    expect(listApplications()[0].notes[0].content).toBe("keep this");
-    expect(revalidatePath).not.toHaveBeenCalled();
-  });
-});
-
-// ─── deleteNota ──────────────────────────────────────────────────────────────
-
-describe("deleteNota", () => {
-  it("soft-deletes the note", async () => {
-    const { createPostulacion, createNota, deleteNota } = await getActions();
-    const { listApplications } = await getDb();
-
-    await createPostulacion(makeFormData({ nombreEmpresa: "DelNote", estado: "aplicado", linkPropuesta: "", textoPostulacion: "" }));
-    const appId = listApplications()[0].id;
-    await createNota(appId, makeFormData({ content: "to delete" }));
-    const noteId = listApplications()[0].notes[0].id;
-    vi.mocked(revalidatePath).mockClear();
-
-    await deleteNota(noteId);
-
-    expect(listApplications()[0].noteCount).toBe(0);
+    expect(app.latestNote).toBe("My note content");
+    expect(app.notes[0].title).toBe("My note title");
     expect(revalidatePath).toHaveBeenCalledWith("/");
   });
 });

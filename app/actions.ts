@@ -7,14 +7,14 @@ import path from "node:path";
 import { revalidatePath } from "next/cache";
 import {
   createApplication,
-  createApplicationNote,
   getCvFilePath,
   getCvStorageDir,
   isApplicationStatus,
   softDeleteApplication,
-  softDeleteApplicationNote,
   updateApplication,
+  createApplicationNote,
   updateApplicationNote,
+  softDeleteApplicationNote,
   type ApplicationInput,
   type CvInput
 } from "@/lib/db";
@@ -93,7 +93,7 @@ export async function createPostulacion(formData: FormData) {
   const notaInicial = formString(formData, "notaInicial");
 
   if (notaInicial) {
-    createApplicationNote(id, notaInicial);
+    createApplicationNote(id, "Nota inicial", notaInicial);
   }
 
   revalidatePath("/");
@@ -118,23 +118,21 @@ export async function deletePostulacion(id: number) {
 
 export async function createNota(postulacionId: number, formData: FormData) {
   const content = formString(formData, "content");
+  const title = formString(formData, "title") || "Nueva Nota";
 
-  if (!content) {
-    return;
-  }
+  if (!content) return;
 
-  createApplicationNote(postulacionId, content);
+  createApplicationNote(postulacionId, title, content);
   revalidatePath("/");
 }
 
 export async function updateNota(id: number, formData: FormData) {
   const content = formString(formData, "content");
+  const title = formString(formData, "title") || "Nota sin título";
 
-  if (!content) {
-    return;
-  }
+  if (!content) return;
 
-  updateApplicationNote(id, content);
+  updateApplicationNote(id, title, content);
   revalidatePath("/");
 }
 

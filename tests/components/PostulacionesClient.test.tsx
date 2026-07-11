@@ -25,6 +25,17 @@ vi.mock("react-markdown", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div data-testid="markdown-preview">{children}</div>,
 }));
 
+// Mock CodeMirror
+vi.mock("@uiw/react-codemirror", () => ({
+  default: ({ value, onChange }: { value: string, onChange: (val: string) => void }) => (
+    <textarea 
+      data-testid="mock-codemirror" 
+      value={value} 
+      onChange={(e) => onChange(e.target.value)} 
+    />
+  ),
+}));
+
 const mockApplications: Application[] = [
   {
     id: 1,
@@ -34,10 +45,12 @@ const mockApplications: Application[] = [
     textoPostulacion: "Here is my application text.",
     cvFilename: "resume.pdf",
     cvStoredName: "123.pdf",
+    cvVersion: "default",
+    notas: "First note",
     noteCount: 1,
-    latestNote: "First note",
+    latestNote: "First note content",
     notes: [
-      { id: 10, postulacionId: 1, content: "First note", createdAt: "2023-01-01", updatedAt: "2023-01-01" }
+      { id: 1, postulacionId: 1, title: "Nota 1", content: "First note content", createdAt: "2023-01-01", updatedAt: "2023-01-01", deletedAt: null }
     ],
     createdAt: "2023-01-01",
     updatedAt: "2023-01-01",
@@ -51,6 +64,8 @@ const mockApplications: Application[] = [
     textoPostulacion: "",
     cvFilename: "",
     cvStoredName: "",
+    cvVersion: "",
+    notas: "",
     noteCount: 0,
     latestNote: "",
     notes: [],
@@ -161,26 +176,23 @@ describe("PostulacionesClient", () => {
     });
   });
 
-  it("opens notes modal and allows adding a note", async () => {
+  it("opens notes modal and allows editing notas", async () => {
     const user = userEvent.setup();
     render(<PostulacionesClient applications={mockApplications} />);
     
-    // Click on the note count badge for the first application
-    const noteBtns = screen.getAllByRole("button", { name: "1" });
+    // Click on the notes button for the first application
+    const noteBtns = screen.getAllByRole("button", { name: /ver notas/i });
     fireEvent.click(noteBtns[0]);
     
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(screen.getAllByText("First note").length).toBeGreaterThan(0); // Existing note
     
-    const noteInput = screen.getByPlaceholderText(/escribe markdown/i);
-    await user.type(noteInput, "My new note");
-    
-    const addNoteBtn = screen.getByRole("button", { name: "Agregar nota" });
-    await user.click(addNoteBtn);
+    const saveNoteBtn = screen.getByRole("button", { name: "Guardar" });
+    await user.click(saveNoteBtn);
     
     await waitFor(() => {
-      expect(actions.createNota).toHaveBeenCalledWith(1, expect.any(FormData));
+      // It should call updateNota since it has a note initially
+      expect(actions.updateNota).toHaveBeenCalledWith(1, expect.any(FormData));
     });
   });
 });

@@ -230,8 +230,8 @@ describe("ensureVersionsDir fallbacks", () => {
   });
 
   beforeEach(() => {
-    // Delete default.yaml if it exists from other parallel tests
-    try { fs.unlinkSync(path.join(versionsDir, "default.yaml")); } catch {}
+    // Delete entire versionsDir to ensure it's empty for these tests
+    try { fs.rmSync(versionsDir, { recursive: true, force: true }); } catch {}
   });
 
   it("copies legacy cv.yaml if present", async () => {
@@ -240,7 +240,7 @@ describe("ensureVersionsDir fallbacks", () => {
     
     // Call compileCv to trigger ensureVersionsDir
     const { compileCv } = await import("@/app/actions");
-    await compileCv("some-version", "content");
+    await compileCv("some-version", "cv:\n  name: Legacy");
 
     const defaultPath = path.join(versionsDir, "default.yaml");
     expect(fs.readFileSync(defaultPath, "utf-8")).toBe("cv:\n  name: Legacy");
@@ -251,18 +251,19 @@ describe("ensureVersionsDir fallbacks", () => {
     fs.writeFileSync(examplePath, "cv:\n  name: John Doe Example");
     
     const { compileCv } = await import("@/app/actions");
-    await compileCv("some-version", "content");
+    await compileCv("some-version", "cv:\n  name: Legacy");
 
     const defaultPath = path.join(versionsDir, "default.yaml");
     expect(fs.readFileSync(defaultPath, "utf-8")).toBe("cv:\n  name: John Doe Example");
   });
 
-  it("creates minimal default if nothing else is present", async () => {
-    const { compileCv } = await import("@/app/actions");
-    await compileCv("some-version", "content");
+  it("leaves directory empty if nothing else is present", async () => {
+    const { compileCv, listCvVersions } = await import("@/app/actions");
+    await compileCv("some-version", "cv:\n  name: Legacy");
 
-    const defaultPath = path.join(versionsDir, "default.yaml");
-    expect(fs.readFileSync(defaultPath, "utf-8")).toBe("cv:\n  name: default\n");
+    const versions = await listCvVersions();
+    expect(versions).toContain("some-version");
+    expect(versions).not.toContain("default");
   });
 
 });

@@ -142,8 +142,9 @@ const outputDir = path.join(dataDir, "rendercv_output");
 
 function ensureVersionsDir() {
   fs.mkdirSync(versionsDir, { recursive: true });
-  const defaultPath = path.join(versionsDir, "default.yaml");
-  if (!fs.existsSync(defaultPath)) {
+  const files = fs.readdirSync(versionsDir);
+  if (files.length === 0) {
+    const defaultPath = path.join(versionsDir, "default.yaml");
     const oldCvPath = path.join(dataDir, "cv.yaml");
     if (fs.existsSync(oldCvPath)) {
       fs.copyFileSync(oldCvPath, defaultPath);
@@ -151,8 +152,6 @@ function ensureVersionsDir() {
       const examplePath = path.join(process.cwd(), "rendercv-repo", "examples", "John_Doe_ClassicTheme_CV.yaml");
       if (fs.existsSync(examplePath)) {
         fs.copyFileSync(examplePath, defaultPath);
-      } else {
-        fs.writeFileSync(defaultPath, "cv:\n  name: default\n", "utf-8");
       }
     }
   }
@@ -169,28 +168,28 @@ export async function listCvVersions(): Promise<string[]> {
 export async function getCvVersion(name: string): Promise<string> {
   ensureVersionsDir();
   const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "");
-  const versionPath = path.join(versionsDir, `${sanitized || "default"}.yaml`);
+  if (!sanitized) return "";
+  const versionPath = path.join(versionsDir, `${sanitized}.yaml`);
   if (fs.existsSync(versionPath)) {
     return fs.readFileSync(versionPath, "utf-8");
   }
   return "";
 }
 
-export async function getCvYaml(): Promise<string> {
-  return getCvVersion("default");
-}
+// Removed getCvYaml function
 
 export async function saveCvVersion(name: string, content: string): Promise<void> {
   ensureVersionsDir();
   const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "");
-  const versionPath = path.join(versionsDir, `${sanitized || "default"}.yaml`);
+  if (!sanitized) return;
+  const versionPath = path.join(versionsDir, `${sanitized}.yaml`);
   fs.writeFileSync(versionPath, content, "utf-8");
 }
 
 export async function deleteCvVersion(name: string): Promise<void> {
   ensureVersionsDir();
   const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "");
-  if (sanitized === "default") return;
+  if (!sanitized) return;
   const versionPath = path.join(versionsDir, `${sanitized}.yaml`);
   if (fs.existsSync(versionPath)) {
     fs.unlinkSync(versionPath);
@@ -212,7 +211,7 @@ export async function renameCvVersion(oldName: string, newName: string): Promise
   const sanitizedOld = oldName.replace(/[^a-zA-Z0-9_-]/g, "");
   const sanitizedNew = newName.replace(/[^a-zA-Z0-9_-]/g, "");
 
-  if (sanitizedOld === "default") return { success: false, error: "No se puede renombrar la versión principal." };
+  if (!sanitizedOld) return { success: false, error: "El nombre original es inválido." };
   if (!sanitizedNew) return { success: false, error: "El nuevo nombre es inválido." };
   if (sanitizedOld === sanitizedNew) return { success: true };
 
@@ -246,7 +245,8 @@ export async function renameCvVersion(oldName: string, newName: string): Promise
 export async function compileCv(name: string, yamlContent: string): Promise<{ success: boolean; error?: string; pageCount?: number }> {
   try {
     ensureVersionsDir();
-    const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "") || "default";
+    const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!sanitized) return { success: false, error: "Nombre inválido." };
     const versionPath = path.join(versionsDir, `${sanitized}.yaml`);
     fs.writeFileSync(versionPath, yamlContent, "utf-8");
 

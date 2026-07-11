@@ -111,25 +111,12 @@ describe("getCvVersion", () => {
     expect(await getCvVersion(`_nonexistent_${Date.now()}`)).toBe("");
   });
 
-  it("sanitizes path traversal: ../../etc/passwd → falls back to default", async () => {
-    const { getCvVersion, saveCvVersion } = await import("@/app/actions");
-    // Ensure default exists
-    const defaultPath = path.join(realVersionsDir, "default.yaml");
-    if (!fs.existsSync(defaultPath)) {
-      await saveCvVersion("default", "cv:\n  name: Default");
-      // Don't add to cleanup since default should persist
-    }
-    // "../../etc/passwd" sanitized to "" → "default"
+  it("sanitizes path traversal: ../../etc/passwd → returns empty", async () => {
+    const { getCvVersion } = await import("@/app/actions");
     const result = await getCvVersion("../../etc/passwd");
     expect(typeof result).toBe("string");
     // Should not be the /etc/passwd contents
-    expect(result).not.toContain("root:");
-  });
-
-  it("getCvYaml calls getCvVersion('default')", async () => {
-    const { getCvYaml, saveCvVersion } = await import("@/app/actions");
-    await saveCvVersion("default", "yaml default content");
-    expect(await getCvYaml()).toBe("yaml default content");
+    expect(result).toBe("");
   });
 });
 
@@ -177,17 +164,6 @@ describe("deleteCvVersion", () => {
     expect(fs.existsSync(filePath)).toBe(false);
   });
 
-  it("does nothing when trying to delete 'default'", async () => {
-    const { saveCvVersion, deleteCvVersion } = await import("@/app/actions");
-    // Ensure default exists
-    await saveCvVersion("default", "protected");
-    const defaultPath = path.join(realVersionsDir, "default.yaml");
-    expect(fs.existsSync(defaultPath)).toBe(true);
-
-    await deleteCvVersion("default");
-    expect(fs.existsSync(defaultPath)).toBe(true);
-  });
-
   it("also deletes associated PDF and PNG files", async () => {
     const { saveCvVersion, deleteCvVersion } = await import("@/app/actions");
     const name = uniqueName();
@@ -229,12 +205,7 @@ describe("renameCvVersion", () => {
     expect(fs.existsSync(path.join(realOutputDir, `${newName}_1.png`))).toBe(true);
   });
 
-  it("fails when trying to rename 'default'", async () => {
-    const { renameCvVersion } = await import("@/app/actions");
-    const result = await renameCvVersion("default", uniqueName());
-    expect(result.success).toBe(false);
-    expect(result.error).toMatch(/principal/i);
-  });
+// removed
 });
 
 describe("compileCv", () => {

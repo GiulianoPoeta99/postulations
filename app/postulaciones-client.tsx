@@ -223,7 +223,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   // CV Editor states
   const [cvYaml, setCvYaml] = useState("");
   const [cvVersions, setCvVersions] = useState<string[]>([]);
-  const [activeVersion, setActiveVersion] = useState("default");
+  const [activeVersion, setActiveVersion] = useState("");
   const [showSaveAsModal, setShowSaveAsModal] = useState(false);
   const [saveAsName, setSaveAsName] = useState("");
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -264,6 +264,9 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   const loadVersions = useCallback(async () => {
     const versions = await listCvVersions();
     setCvVersions(versions);
+    if (!activeVersionRef.current && versions.length > 0) {
+      setActiveVersion(versions[0]);
+    }
   }, []);
 
   const doCompile = useCallback(async (version: string, yaml: string) => {
@@ -295,6 +298,8 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
 
     let cancelled = false;
     loadVersions();
+
+    if (!activeVersion) return;
 
     getCvVersion(activeVersion).then((yaml) => {
       if (cancelled) return;
@@ -337,7 +342,20 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
     e.preventDefault();
     const name = saveAsName.replace(/[^a-zA-Z0-9_-]/g, "").trim();
     if (!name) return;
-    await saveCvVersion(name, cvYaml);
+    
+    let contentToSave = cvYaml;
+    if (!contentToSave.trim()) {
+      contentToSave = `cv:
+  name: "Tu Nombre"
+  location: "Tu Ubicación"
+  email: "tuemail@ejemplo.com"
+  sections:
+    summary:
+      - "Este es un CV de ejemplo. Modifica este archivo YAML para empezar."
+`;
+    }
+    
+    await saveCvVersion(name, contentToSave);
     await loadVersions();
     setActiveVersion(name);
     setShowSaveAsModal(false);
@@ -345,12 +363,22 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   };
 
   const handleDeleteVersion = async (versionToDelete: string) => {
-    if (versionToDelete === "default") return;
     if (!confirm(`¿Eliminar la versión "${versionToDelete}"?`)) return;
     await deleteCvVersion(versionToDelete);
+    
+    // We update the state locally immediately to avoid lag
+    const newVersions = cvVersions.filter(v => v !== versionToDelete);
+    setCvVersions(newVersions);
+    
     if (activeVersion === versionToDelete) {
-      setActiveVersion("default");
+      if (newVersions.length > 0) {
+        setActiveVersion(newVersions[0]);
+      } else {
+        setActiveVersion("");
+        setCvYaml("");
+      }
     }
+    // ensure server sync
     await loadVersions();
   };
 
@@ -631,10 +659,9 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                       title={`Seleccionar ${v}`}
                     >
                       <FileText size={14} aria-hidden="true" />
-                      <span>{v === "default" ? "default (principal)" : v}</span>
+                      <span>{v}</span>
                     </button>
-                    {v !== "default" && (
-                      <div className="cv-version-actions">
+                    <div className="cv-version-actions">
                         <button 
                           className="icon-button"
                           title="Renombrar versión"
@@ -650,17 +677,18 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                           <Trash2 size={12} />
                         </button>
                       </div>
-                    )}
-                  </div>
+                      </div>
                 ))}
               </div>
             </div>
 
             {/* Editor panel */}
-            <div className="cv-editor-panel">
-              <div className="cv-top-bar">
-                <div className="cv-top-bar-left">
-                  <span className="cv-version-label">Editando: {activeVersion === "default" ? "default (principal)" : activeVersion}</span>
+            {activeVersion ? (
+              <>
+                <div className="cv-editor-panel">
+                  <div className="cv-top-bar">
+                    <div className="cv-top-bar-left">
+                      <span className="cv-version-label">Editando: {activeVersion}</span>
                 </div>
                 <div className="cv-compile-inline">
                   {compileStatus === "compiling" && (
@@ -757,6 +785,18 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                 )}
               </div>
             </div>
+            </>
+            ) : (
+              <div className="cv-editor-panel" style={{ alignItems: "center", justifyContent: "center" }}>
+                <div className="cv-preview-empty">
+                  <p>No tienes ningún CV activo.</p>
+                  <button className="primary-button" type="button" onClick={() => { setSaveAsName(""); setShowSaveAsModal(true); }}>
+                    <Plus size={16} aria-hidden="true" />
+                    Crear nuevo CV
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : null}
       </section>

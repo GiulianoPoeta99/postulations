@@ -309,16 +309,6 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
     isDirtyRef.current = true;
   };
 
-  const handleCvThemeChange = (newTheme: string) => {
-    const regex = /(design\s*:\s*\n(?:\s+.*\n)*?\s+theme\s*:\s*)[a-zA-Z0-9_-]+/g;
-    const simpleRegex = /(theme\s*:\s*)[a-zA-Z0-9_-]+/g;
-    const updated = regex.test(cvYaml)
-      ? cvYaml.replace(regex, `$1${newTheme}`)
-      : cvYaml.replace(simpleRegex, `$1${newTheme}`);
-    setCvYaml(updated);
-    isDirtyRef.current = true;
-  };
-
   const handleSaveAs = async (e: React.FormEvent) => {
     e.preventDefault();
     const name = saveAsName.replace(/[^a-zA-Z0-9_-]/g, "").trim();
@@ -339,11 +329,6 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   };
 
   // ----- Derived state -----
-
-  const currentCvTheme = useMemo(() => {
-    const match = cvYaml.match(/theme\s*:\s*([a-zA-Z0-9_-]+)/);
-    return match ? match[1] : "classic";
-  }, [cvYaml]);
 
   const filteredApplications = useMemo(() => {
     return applications.filter((app) => {
@@ -585,38 +570,46 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
               <div className="cv-top-bar">
                 {/* Version selector */}
                 <div className="cv-version-bar">
-                  <select
-                    value={activeVersion}
-                    onChange={(e) => setActiveVersion(e.target.value)}
-                    title="Versión activa"
-                  >
-                    {cvVersions.map((v) => (
-                      <option key={v} value={v}>
-                        {v === "default" ? "default (principal)" : v}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="cv-version-select-group">
+                    <span className="cv-version-label">Versión actual:</span>
+                    <select
+                      value={activeVersion}
+                      onChange={(e) => setActiveVersion(e.target.value)}
+                      title="Seleccionar versión del CV"
+                    >
+                      {cvVersions.map((v) => (
+                        <option key={v} value={v}>
+                          {v === "default" ? "default (principal)" : v}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <button
                     className="secondary-button"
                     type="button"
                     onClick={() => { setSaveAsName(""); setShowSaveAsModal(true); }}
+                    title="Crear una copia de esta versión"
                   >
-                    Guardar Como...
+                    <Plus size={15} aria-hidden="true" />
+                    Duplicar Versión
                   </button>
                   {activeVersion !== "default" && (
                     <button
                       className="danger-button"
                       type="button"
                       onClick={handleDeleteVersion}
-                      title="Eliminar esta versión"
+                      title="Eliminar esta versión permanentemente"
                     >
-                      Eliminar
+                      <Trash2 size={15} aria-hidden="true" />
+                      Eliminar Versión
                     </button>
                   )}
                 </div>
 
-                {/* Compile controls */}
                 <div className="cv-compile-actions">
+                  <span className="cv-autosave-hint">
+                    Auto-compila al terminar de escribir
+                  </span>
                   {compileStatus === "compiling" && (
                     <span className="compile-status compiling">Compilando...</span>
                   )}
@@ -631,31 +624,11 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                     type="button"
                     onClick={handleCompile}
                     disabled={compileStatus === "compiling"}
+                    title="Fuerza la compilación si el auto-compilado falló"
                   >
-                    {compileStatus === "compiling" ? "Compilando..." : "Compilar"}
+                    {compileStatus === "compiling" ? "Compilando..." : "Forzar Compilación"}
                   </button>
                 </div>
-              </div>
-
-              {/* CV Theme selector */}
-              <div className="cv-theme-row">
-                <label className="theme-select-wrapper">
-                  <span>Tema del CV</span>
-                  <select value={currentCvTheme} onChange={(e) => handleCvThemeChange(e.target.value)}>
-                    <option value="classic">Classic</option>
-                    <option value="moderncv">Modern CV</option>
-                    <option value="sb2nov">SB2nov</option>
-                    <option value="engineeringresumes">Engineering Resumes</option>
-                    <option value="engineeringclassic">Engineering Classic</option>
-                    <option value="harvard">Harvard</option>
-                    <option value="ink">Ink</option>
-                    <option value="opal">Opal</option>
-                    <option value="ember">Ember</option>
-                  </select>
-                </label>
-                <span className="cv-autosave-hint">
-                  Auto-compila 1.5s después de escribir
-                </span>
               </div>
 
               <textarea

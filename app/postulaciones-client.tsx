@@ -5,6 +5,8 @@ import {
   FileText,
   MessageSquareText,
   Moon,
+  MoreVertical,
+  Pencil,
   Play,
   Plus,
   Save,
@@ -226,6 +228,8 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   const [compileError, setCompileError] = useState("");
   const [previewVersion, setPreviewVersion] = useState(0);
   const [cvPageCount, setCvPageCount] = useState(1);
+  const [showVersionMenu, setShowVersionMenu] = useState(false);
+  const versionMenuRef = useRef<HTMLDivElement>(null);
 
   // Notes live preview states
   const [noteComposeText, setNoteComposeText] = useState("");
@@ -313,6 +317,16 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
     setCvYaml(val);
     isDirtyRef.current = true;
   };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (versionMenuRef.current && !versionMenuRef.current.contains(e.target as Node)) {
+        setShowVersionMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSaveAs = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -589,26 +603,45 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                       ))}
                     </select>
                   </div>
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={() => { setSaveAsName(""); setShowSaveAsModal(true); }}
-                    title="Crear una copia de esta versión"
-                  >
-                    <Plus size={15} aria-hidden="true" />
-                    Duplicar Versión
-                  </button>
-                  {activeVersion !== "default" && (
+                  <div className="version-menu-container" ref={versionMenuRef}>
                     <button
-                      className="danger-button"
+                      className="secondary-button icon-only"
                       type="button"
-                      onClick={handleDeleteVersion}
-                      title="Eliminar esta versión permanentemente"
+                      onClick={() => setShowVersionMenu(!showVersionMenu)}
+                      title="Opciones de versión"
                     >
-                      <Trash2 size={15} aria-hidden="true" />
-                      Eliminar Versión
+                      <MoreVertical size={15} aria-hidden="true" />
                     </button>
-                  )}
+                    {showVersionMenu && (
+                      <div className="version-dropdown-menu">
+                        <button
+                          className="dropdown-item"
+                          type="button"
+                          onClick={() => { 
+                            setShowVersionMenu(false); 
+                            setSaveAsName(""); 
+                            setShowSaveAsModal(true); 
+                          }}
+                        >
+                          <Plus size={14} aria-hidden="true" />
+                          Duplicar Versión
+                        </button>
+                        {activeVersion !== "default" && (
+                          <button
+                            className="dropdown-item danger"
+                            type="button"
+                            onClick={() => { 
+                              setShowVersionMenu(false); 
+                              handleDeleteVersion(); 
+                            }}
+                          >
+                            <Trash2 size={14} aria-hidden="true" />
+                            Eliminar Versión
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   <div className="cv-compile-inline">
                     {compileStatus === "compiling" && (
                       <span className="compile-status compiling" title="Compilando...">

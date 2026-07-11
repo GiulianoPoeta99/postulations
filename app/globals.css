@@ -849,6 +849,61 @@ tr:last-child td {
   justify-content: center;
 }
 
+/* Version Menu Dropdown */
+.version-menu-container {
+  position: relative;
+  display: inline-block;
+}
+
+.version-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 4px;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms ease;
+}
+
+.dropdown-item:hover {
+  background: var(--hover);
+}
+
+.dropdown-item.danger {
+  color: #ef4444;
+}
+
+.dropdown-item.danger:hover {
+  background: #fef2f2;
+}
+
+:root[data-theme="dark"] .dropdown-item.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
 .spinner-small {
   display: inline-block;
   width: 12px;
@@ -909,11 +964,17 @@ tr:last-child td {
   flex-direction: column;
 }
 
+.cv-codemirror-wrapper > div,
+.cv-codemirror-wrapper .cm-theme,
 .cv-codemirror-wrapper .cm-editor {
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
 .cv-codemirror-wrapper .cm-scroller {
+  flex-grow: 1;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 14px;
   line-height: 1.6;

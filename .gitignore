@@ -58,3 +58,5 @@ yarn.lock
 pnpm-lock.yaml
 bun.lockb
 coverage/
+playwright-report/
+test-results/

@@ -248,9 +248,9 @@ describe("compileCv", () => {
     fs.writeFileSync(oldPngPath, "old png");
     expect(fs.existsSync(oldPngPath)).toBe(true);
 
-    await compileCv("cleanup", "cv:\n  name: Test");
+    await compileCv("cleanup", "invalid yaml: [[[");
     // Since compileCv cleans up files matching `${sanitized}_*.png` before compiling,
-    // and python is not mocked here (it fails), the old png should be deleted and not recreated.
+    // and the invalid YAML causes rendercv to fail, the old png should be deleted and not recreated.
     expect(fs.existsSync(oldPngPath)).toBe(false);
   });
 });

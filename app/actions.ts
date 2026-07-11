@@ -207,7 +207,7 @@ export async function deleteCvVersion(name: string): Promise<void> {
   }
 }
 
-export async function compileCv(name: string, yamlContent: string): Promise<{ success: boolean; error?: string }> {
+export async function compileCv(name: string, yamlContent: string): Promise<{ success: boolean; error?: string; pageCount?: number }> {
   try {
     ensureVersionsDir();
     const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "") || "default";
@@ -224,10 +224,14 @@ export async function compileCv(name: string, yamlContent: string): Promise<{ su
       fs.unlinkSync(path.join(outputDir, file));
     }
 
-    const cmd = `python3 -m rendercv render "${versionPath}" -o "${outputDir}" --pdf-path "rendercv_output/${sanitized}.pdf" --png-path "rendercv_output/${sanitized}.png" --dont-generate-markdown --dont-generate-html`;
+    const pdfOutputPath = path.join(outputDir, `${sanitized}.pdf`);
+    const pngOutputPath = path.join(outputDir, `${sanitized}.png`);
+    const cmd = `python3 -m rendercv render "${versionPath}" -o "${outputDir}" --pdf-path "${pdfOutputPath}" --png-path "${pngOutputPath}" --dont-generate-markdown --dont-generate-html`;
     execSync(cmd, { stdio: "pipe" });
 
-    return { success: true };
+    const newPngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${sanitized}_`) && f.endsWith(".png"));
+    
+    return { success: true, pageCount: newPngFiles.length };
   } catch (error: any) {
     console.error("RenderCV compile error:", error);
     const stderr = error.stderr?.toString() || error.message || "Error al compilar el CV.";

@@ -220,6 +220,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   const [compileStatus, setCompileStatus] = useState<"idle" | "compiling" | "success" | "error">("idle");
   const [compileError, setCompileError] = useState("");
   const [previewVersion, setPreviewVersion] = useState(0);
+  const [cvPageCount, setCvPageCount] = useState(1);
 
   // Notes live preview states
   const [noteComposeText, setNoteComposeText] = useState("");
@@ -258,6 +259,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
       const res = await compileCv(version, yaml);
       if (res.success) {
         setCompileStatus("success");
+        if (res.pageCount) setCvPageCount(res.pageCount);
         setPreviewVersion((v) => v + 1);
       } else {
         setCompileStatus("error");
@@ -297,7 +299,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
     const timer = setTimeout(() => {
       isDirtyRef.current = false;
       doCompile(activeVersionRef.current, cvYamlRef.current);
-    }, 1500);
+    }, 800);
 
     return () => clearTimeout(timer);
   }, [cvYaml, doCompile]);
@@ -698,10 +700,24 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                     </button>
                   </div>
                 ) : (
-                  <iframe
-                    src={`/api/cv/pdf?version=${activeVersion}&v=${previewVersion}`}
-                    title="Vista previa del CV"
-                  />
+                  <div className="cv-preview-image-wrapper">
+                    {compileStatus === "compiling" && (
+                      <div className="cv-preview-overlay">
+                        <div className="spinner"></div>
+                        <span>Actualizando...</span>
+                      </div>
+                    )}
+                    <div className="cv-preview-pages-container">
+                      {Array.from({ length: cvPageCount }).map((_, i) => (
+                        <img
+                          key={`${previewVersion}-${i}`}
+                          src={`/api/cv/preview?version=${activeVersion}&page=${i + 1}&v=${previewVersion}`}
+                          alt={`Vista previa del CV página ${i + 1}`}
+                          className={`cv-preview-image ${compileStatus === "compiling" ? "compiling" : ""}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

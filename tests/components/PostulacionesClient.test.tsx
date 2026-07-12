@@ -269,5 +269,61 @@ describe("PostulacionesClient", () => {
       expect(actions.saveCvVersion).toHaveBeenCalledWith("NewVersion", "cv: test");
     });
   });
-});
+  // --- Dashboard Tab Tests ---
+  
+  it("switches to Dashboard tab and renders metrics correctly", async () => {
+    const user = userEvent.setup();
+    render(<PostulacionesClient applications={mockApplications} />);
+    
+    // Switch to Dashboard Tab
+    const dashboardTabBtn = screen.getByRole("tab", { name: /Dashboard/i });
+    await user.click(dashboardTabBtn);
+    
+    // Check Conversion Funnel card
+    expect(screen.getByText("Embudo de Conversión")).toBeInTheDocument();
+    expect(screen.getByText("Enviadas: 2")).toBeInTheDocument();
+    expect(screen.getByText("Entrevistas: 1")).toBeInTheDocument();
+    
+    // Success rate = (1/2)*100 = 50.0%
+    expect(screen.getByText("50.0%")).toBeInTheDocument();
 
+    // Consistency Card
+    expect(screen.getByText("Consistencia Semanal")).toBeInTheDocument();
+    expect(screen.getByText("Objetivo: 10")).toBeInTheDocument();
+    
+    // Action Required Card
+    expect(screen.getByText("Acción Requerida")).toBeInTheDocument();
+
+    // A/B Testing Card
+    expect(screen.getByText("A/B Testing de CVs")).toBeInTheDocument();
+    expect(screen.getByText("default")).toBeInTheDocument(); // The CV version of Acme
+  });
+
+  // --- Kanban View Tests ---
+  
+  it("toggles to Kanban view and renders columns and cards", async () => {
+    const user = userEvent.setup();
+    render(<PostulacionesClient applications={mockApplications} />);
+    
+    // Switch to Kanban View
+    const kanbanBtn = screen.getByTitle("Tablero Kanban");
+    await user.click(kanbanBtn);
+    
+    // Columns should render based on states (Pendiente, Aplicado, Entrevista, Rechazado)
+    expect(screen.getByText("Pendiente")).toBeInTheDocument();
+    expect(screen.getByText("Aplicado")).toBeInTheDocument();
+    expect(screen.getByText("Entrevista")).toBeInTheDocument();
+    expect(screen.getByText("Rechazado")).toBeInTheDocument();
+
+    // Cards should be rendered in the board
+    const acmeCard = screen.getByText("Acme Corp");
+    const globexCard = screen.getByText("Globex");
+    expect(acmeCard).toBeInTheDocument();
+    expect(globexCard).toBeInTheDocument();
+    
+    // Check if dragging sets the dragged class (difficult to fully simulate HTML5 dnd with testing-library, 
+    // but we can verify the DOM nodes exist properly with draggable attributes)
+    const draggableCard = acmeCard.closest('.kanban-card');
+    expect(draggableCard).toHaveAttribute('draggable', 'true');
+  });
+});

@@ -1,8 +1,12 @@
 "use client";
-
+// Force recompile
 import {
+  AlertCircle,
+  Clock,
   ExternalLink,
   FileText,
+  FlaskConical,
+  HelpCircle,
   MessageSquareText,
   Moon,
   MoreVertical,
@@ -11,7 +15,9 @@ import {
   Plus,
   Save,
   Sun,
+  Target,
   Trash2,
+  TrendingUp,
   X
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -234,7 +240,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [activeTab, setActiveTab] = useState<"postulaciones" | "cv">("postulaciones");
+  const [activeTab, setActiveTab] = useState<"postulaciones" | "cv" | "dashboard">("postulaciones");
   const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
 
   // Table search/filter
@@ -549,7 +555,199 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
           >
             Mi CV (RenderCV)
           </button>
+          <button
+            className={`tab-button ${activeTab === "dashboard" ? "active" : ""}`}
+            onClick={() => setActiveTab("dashboard")}
+            role="tab"
+            aria-selected={activeTab === "dashboard"}
+          >
+            Dashboard
+          </button>
         </nav>
+
+        {/* ── DASHBOARD TAB ── */}
+        {activeTab === "dashboard" ? (() => {
+          const totalApplied = applications.filter(a => a.estado !== "pendiente").length;
+          const totalInterviews = applications.filter(a => a.estado === "entrevista").length;
+          const conversionRate = totalApplied > 0 ? ((totalInterviews / totalApplied) * 100).toFixed(1) : "0.0";
+          const conversionNumber = parseFloat(conversionRate);
+          
+          const staleApps = applications.filter(a => {
+            if (a.estado !== "aplicado") return false;
+            const daysDiff = (Date.now() - new Date(a.updatedAt).getTime()) / (1000 * 3600 * 24);
+            return daysDiff > 7;
+          });
+
+          const recentApps = applications.filter(a => {
+            const daysDiff = (Date.now() - new Date(a.createdAt).getTime()) / (1000 * 3600 * 24);
+            return daysDiff <= 7;
+          });
+          const weeklyGoal = 10;
+          const weeklyProgress = Math.min((recentApps.length / weeklyGoal) * 100, 100);
+
+          const cvStats = applications.reduce((acc, app) => {
+            const version = app.cvVersion || "Sin especificar";
+            if (!acc[version]) acc[version] = { total: 0, interviews: 0 };
+            if (app.estado !== "pendiente") acc[version].total++;
+            if (app.estado === "entrevista") acc[version].interviews++;
+            return acc;
+          }, {} as Record<string, { total: number; interviews: number }>);
+
+          return (
+            <div className="dashboard-grid">
+              {/* Funnel Card */}
+              <div className="dashboard-card">
+                <h3>
+                  <div className="widget-title-left">
+                    <TrendingUp size={18} /> Embudo de Conversión
+                  </div>
+                  <div className="widget-help-container">
+                    <HelpCircle size={16} className="widget-help-icon" />
+                    <div className="widget-tooltip">
+                      Compara el total de postulaciones enviadas con las que lograron avanzar a la etapa de entrevista. Te ayuda a diagnosticar si tu CV está funcionando.
+                    </div>
+                  </div>
+                </h3>
+                
+                <div className="metric-hero">
+                  <span className="metric-hero-value">{conversionRate}%</span>
+                  <span className="metric-hero-label">Tasa de Éxito</span>
+                </div>
+
+                <div className="progress-container">
+                  <div className="progress-label">
+                    <span>Enviadas: {totalApplied}</span>
+                    <span>Entrevistas: {totalInterviews}</span>
+                  </div>
+                  <div className="progress-bar-bg">
+                    <div className="progress-bar-fill" style={{ width: `${conversionNumber}%` }}></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Consistency Card */}
+              <div className="dashboard-card">
+                <h3>
+                  <div className="widget-title-left">
+                    <Target size={18} /> Consistencia Semanal
+                  </div>
+                  <div className="widget-help-container">
+                    <HelpCircle size={16} className="widget-help-icon" />
+                    <div className="widget-tooltip">
+                      Mide cuántas postulaciones has realizado en los últimos 7 días. Buscar trabajo es un juego de números, intenta mantener el objetivo semanal para no perder el ritmo.
+                    </div>
+                  </div>
+                </h3>
+                
+                <div className="metric-hero">
+                  <span className="metric-hero-value">{recentApps.length}</span>
+                  <span className="metric-hero-label">Postulaciones (7 días)</span>
+                </div>
+
+                <div className="progress-container">
+                  <div className="progress-label">
+                    <span>Progreso semanal</span>
+                    <span>Objetivo: {weeklyGoal}</span>
+                  </div>
+                  <div className="progress-bar-bg">
+                    <div className="progress-bar-fill" style={{ width: `${weeklyProgress}%`, background: weeklyProgress >= 100 ? 'linear-gradient(90deg, #10b981, #059669)' : undefined }}></div>
+                  </div>
+                  {recentApps.length >= weeklyGoal ? (
+                    <p style={{ color: 'var(--success)', fontSize: 13, marginTop: 8, fontWeight: 600, textAlign: 'center' }}>¡Objetivo cumplido! 🚀</p>
+                  ) : (
+                    <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8, textAlign: 'center' }}>Faltan {weeklyGoal - recentApps.length} para tu meta.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* A/B Testing Card */}
+              <div className="dashboard-card">
+                <h3>
+                  <div className="widget-title-left">
+                    <FlaskConical size={18} /> A/B Testing de CVs
+                  </div>
+                  <div className="widget-help-container">
+                    <HelpCircle size={16} className="widget-help-icon" />
+                    <div className="widget-tooltip">
+                      Analiza la tasa de éxito de cada versión de tu CV. Útil para descubrir qué perfil o formato resuena mejor con los reclutadores y enfocarte en ese.
+                    </div>
+                  </div>
+                </h3>
+                {Object.keys(cvStats).length === 0 ? (
+                  <div className="stale-empty">No hay suficientes datos todavía.</div>
+                ) : (
+                  <table className="dashboard-ab-table">
+                    <thead>
+                      <tr>
+                        <th>Versión CV</th>
+                        <th>Enviados</th>
+                        <th>Conversión</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(cvStats).map(([version, stats]) => {
+                        const rateNum = stats.total > 0 ? (stats.interviews / stats.total) * 100 : 0;
+                        const rateStr = rateNum.toFixed(1);
+                        return (
+                          <tr key={version}>
+                            <td style={{ fontWeight: 600 }}>{version}</td>
+                            <td>{stats.total}</td>
+                            <td>
+                              <div className="ab-rate-container">
+                                <span className="highlight">{rateStr}%</span>
+                                <div className="ab-rate-bar">
+                                  <div className="ab-rate-fill" style={{ width: `${rateNum}%` }}></div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Follow-ups Card */}
+              <div className="dashboard-card">
+                <h3>
+                  <div className="widget-title-left">
+                    <Clock size={18} /> Acción Requerida
+                  </div>
+                  <div className="widget-help-container">
+                    <HelpCircle size={16} className="widget-help-icon" />
+                    <div className="widget-tooltip">
+                      Lista las postulaciones en estado 'Aplicado' que llevan más de 7 días sin novedades. ¡Es el momento perfecto para enviar un email de seguimiento!
+                    </div>
+                  </div>
+                </h3>
+                <div className="stale-list">
+                  {staleApps.length === 0 ? (
+                    <div className="stale-empty">¡Estás al día! 🎉<br/><span style={{ fontSize: 12, fontWeight: 400 }}>No hay follow-ups pendientes.</span></div>
+                  ) : (
+                    staleApps.map(app => (
+                      <div key={app.id} className="stale-item">
+                        <div className="stale-item-info">
+                          <span className="stale-item-title">{app.nombreEmpresa}</span>
+                          <span className="stale-item-date">
+                            <AlertCircle size={12} /> Hace más de 7 días
+                          </span>
+                        </div>
+                        <button 
+                          className="icon-button"
+                          onClick={() => openModal({ type: "edit", applicationId: app.id })}
+                          title="Actualizar estado"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })() : null}
 
         {/* ── POSTULACIONES TAB ── */}
         {activeTab === "postulaciones" ? (

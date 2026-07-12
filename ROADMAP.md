@@ -13,10 +13,11 @@ Este documento contiene ideas y futuras funcionalidades a implementar en **Postu
 - [ ] Generar un borrador automático de Carta de Presentación o mensaje de LinkedIn altamente personalizado.
 
 ## 📊 Dashboard y Estadísticas (Analytics)
-- [ ] Crear una sección de métricas o resumen en la pantalla principal.
-- [ ] Mostrar gráficos de tasa de conversión (cuántas aplicaciones llegan a entrevista).
-- [ ] Mostrar total de postulaciones por semana/mes.
-- [ ] Mostrar distribución actual de postulaciones por estado.
+- [x] Crear un panel superior (o pestaña) con métricas accionables.
+- [x] **Embudo de Conversión (El Diagnóstico)**: Mostrar cuántas aplicaciones (`Aplicado`) se convierten en entrevistas (`Entrevista`). Ayuda a saber si falla el CV o las habilidades de entrevista.
+- [x] **A/B Testing de CVs (Killer Feature)**: Mostrar la tasa de respuesta/entrevistas agrupada por versión de CV (`cv_version`).
+- [x] **Consistencia (Racha)**: Tracking semanal de cuántas postulaciones has enviado vs. un objetivo.
+- [x] **Panel de Acción Requerida**: Integrar con el Sistema de Seguimiento (abajo) para mostrar a qué empresas debes mandar email hoy.
 
 ## ⏰ Sistema de Seguimiento (Follow-ups)
 - [ ] Agregar alertas visuales para postulaciones que llevan mucho tiempo (ej. 7-10 días) en estado `Aplicado` sin actualizaciones.

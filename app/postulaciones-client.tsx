@@ -183,9 +183,9 @@ export function ApplicationFields({ application, includeInitialNote = false, cvV
             ))}
           </select>
         </label>
-        
+
         <span style={{ display: 'flex', alignItems: 'center', margin: '0 1rem', color: 'var(--gray)' }}>O</span>
-        
+
         <label className="field" style={{ flex: 1 }}>
           <span>Subir CV manual</span>
           <input
@@ -233,6 +233,12 @@ function Modal({
       </section>
     </div>
   );
+}
+
+function isApplicationStale(app: Application) {
+  if (app.estado !== "aplicado") return false;
+  const daysDiff = (Date.now() - new Date(app.updatedAt).getTime()) / (1000 * 3600 * 24);
+  return daysDiff > 7;
 }
 
 export function PostulacionesClient({ applications }: PostulacionesClientProps) {
@@ -370,7 +376,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
     e.preventDefault();
     const name = saveAsName.replace(/[^a-zA-Z0-9_-]/g, "").trim();
     if (!name) return;
-    
+
     let contentToSave = cvYaml;
     if (!contentToSave.trim()) {
       contentToSave = `cv:
@@ -382,7 +388,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
       - "Este es un CV de ejemplo. Modifica este archivo YAML para empezar."
 `;
     }
-    
+
     await saveCvVersion(name, contentToSave);
     await loadVersions();
     setActiveVersion(name);
@@ -393,11 +399,11 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   const handleDeleteVersion = async (versionToDelete: string) => {
     if (!confirm(`¿Eliminar la versión "${versionToDelete}"?`)) return;
     await deleteCvVersion(versionToDelete);
-    
+
     // We update the state locally immediately to avoid lag
     const newVersions = cvVersions.filter(v => v !== versionToDelete);
     setCvVersions(newVersions);
-    
+
     if (activeVersion === versionToDelete) {
       if (newVersions.length > 0) {
         setActiveVersion(newVersions[0]);
@@ -571,12 +577,8 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
           const totalInterviews = applications.filter(a => a.estado === "entrevista").length;
           const conversionRate = totalApplied > 0 ? ((totalInterviews / totalApplied) * 100).toFixed(1) : "0.0";
           const conversionNumber = parseFloat(conversionRate);
-          
-          const staleApps = applications.filter(a => {
-            if (a.estado !== "aplicado") return false;
-            const daysDiff = (Date.now() - new Date(a.updatedAt).getTime()) / (1000 * 3600 * 24);
-            return daysDiff > 7;
-          });
+
+          const staleApps = applications.filter(isApplicationStale);
 
           const recentApps = applications.filter(a => {
             const daysDiff = (Date.now() - new Date(a.createdAt).getTime()) / (1000 * 3600 * 24);
@@ -608,7 +610,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                     </div>
                   </div>
                 </h3>
-                
+
                 <div className="metric-hero">
                   <span className="metric-hero-value">{conversionRate}%</span>
                   <span className="metric-hero-label">Tasa de Éxito</span>
@@ -638,7 +640,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                     </div>
                   </div>
                 </h3>
-                
+
                 <div className="metric-hero">
                   <span className="metric-hero-value">{recentApps.length}</span>
                   <span className="metric-hero-label">Postulaciones (7 días)</span>
@@ -723,7 +725,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                 </h3>
                 <div className="stale-list">
                   {staleApps.length === 0 ? (
-                    <div className="stale-empty">¡Estás al día! 🎉<br/><span style={{ fontSize: 12, fontWeight: 400 }}>No hay follow-ups pendientes.</span></div>
+                    <div className="stale-empty">¡Estás al día! 🎉<br /><span style={{ fontSize: 12, fontWeight: 400 }}>No hay follow-ups pendientes.</span></div>
                   ) : (
                     staleApps.map(app => (
                       <div key={app.id} className="stale-item">
@@ -733,7 +735,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                             <AlertCircle size={12} /> Hace más de 7 días
                           </span>
                         </div>
-                        <button 
+                        <button
                           className="icon-button"
                           onClick={() => openModal({ type: "edit", applicationId: app.id })}
                           title="Actualizar estado"
@@ -804,121 +806,128 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
               <div className="table-frame">
                 <table>
                   <thead>
-                  <tr>
-                    <th className="id-col">ID</th>
-                    <th>Empresa</th>
-                    <th>Propuesta</th>
-                    <th>Estado</th>
-                    <th>Notas</th>
-                    <th>CV</th>
-                    <th className="actions-col">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredApplications.length === 0 ? (
                     <tr>
-                      <td className="empty-state" colSpan={7}>
-                        {applications.length === 0 ? "Sin postulaciones" : "Sin resultados para la búsqueda"}
-                      </td>
+                      <th className="id-col">ID</th>
+                      <th>Empresa</th>
+                      <th>Propuesta</th>
+                      <th>Estado</th>
+                      <th>Notas</th>
+                      <th>CV</th>
+                      <th className="actions-col">Acciones</th>
                     </tr>
-                  ) : (
-                    filteredApplications.map((application) => (
-                      <tr key={application.id}>
-                        <td className="id-cell">{application.id}</td>
-                        <td>
-                          <strong>{application.nombreEmpresa}</strong>
+                  </thead>
+                  <tbody>
+                    {filteredApplications.length === 0 ? (
+                      <tr>
+                        <td className="empty-state" colSpan={7}>
+                          {applications.length === 0 ? "Sin postulaciones" : "Sin resultados para la búsqueda"}
                         </td>
-                        <td>
-                          <div className="proposal-cell">
-                            {application.linkPropuesta ? (
-                              <a
-                                className="inline-link"
-                                href={application.linkPropuesta}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <ExternalLink size={14} aria-hidden="true" />
-                                Link
-                              </a>
-                            ) : (
-                              <span className="muted-text">Sin link</span>
-                            )}
-                            {application.textoPostulacion ? (
-                              <p>{applicationTextPreview(application.textoPostulacion)}</p>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`status-pill ${application.estado}`}>
-                            {statusLabels[application.estado]}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            className="text-button"
-                            type="button"
-                            onClick={() => {
-                              if (application.notes && application.notes.length > 0) {
-                                setActiveNoteId(application.notes[0].id);
-                                setNoteEditingTitle(application.notes[0].title);
-                                setNoteEditingContent(application.notes[0].content);
-                              } else {
-                                setActiveNoteId("new");
-                                setNoteEditingTitle("Nueva Nota");
-                                setNoteEditingContent("");
-                              }
-                              openModal({ type: "notes", applicationId: application.id });
-                            }}
-                          >
-                            <MessageSquareText size={15} aria-hidden="true" />
-                            {application.noteCount > 0 ? "Ver notas" : "Agregar notas"}
-                          </button>
-                          {application.latestNote ? (
-                            <p className="note-preview">{markdownTextPreview(application.latestNote)}</p>
-                          ) : null}
-                        </td>
-                        <td>
-                          {(application.cvStoredName || application.cvVersion) ? (
+                      </tr>
+                    ) : (
+                      filteredApplications.map((application) => (
+                        <tr key={application.id}>
+                          <td className="id-cell">{application.id}</td>
+                          <td>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                              <strong>{application.nombreEmpresa}</strong>
+                              {isApplicationStale(application) && (
+                                <span className="stale-badge" title="Acción requerida: Han pasado más de 7 días sin novedades.">
+                                  <AlertCircle size={14} />
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="proposal-cell">
+                              {application.linkPropuesta ? (
+                                <a
+                                  className="inline-link"
+                                  href={application.linkPropuesta}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  <ExternalLink size={14} aria-hidden="true" />
+                                  Link
+                                </a>
+                              ) : (
+                                <span className="muted-text">Sin link</span>
+                              )}
+                              {application.textoPostulacion ? (
+                                <p>{applicationTextPreview(application.textoPostulacion)}</p>
+                              ) : null}
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`status-pill ${application.estado}`}>
+                              {statusLabels[application.estado]}
+                            </span>
+                          </td>
+                          <td>
                             <button
                               className="text-button"
                               type="button"
-                              onClick={() => openModal({ type: "previewCv", applicationId: application.id })}
+                              onClick={() => {
+                                if (application.notes && application.notes.length > 0) {
+                                  setActiveNoteId(application.notes[0].id);
+                                  setNoteEditingTitle(application.notes[0].title);
+                                  setNoteEditingContent(application.notes[0].content);
+                                } else {
+                                  setActiveNoteId("new");
+                                  setNoteEditingTitle("Nueva Nota");
+                                  setNoteEditingContent("");
+                                }
+                                openModal({ type: "notes", applicationId: application.id });
+                              }}
                             >
-                              <FileText size={15} aria-hidden="true" />
-                              Ver CV
+                              <MessageSquareText size={15} aria-hidden="true" />
+                              {application.noteCount > 0 ? "Ver notas" : "Agregar notas"}
                             </button>
-                          ) : (
-                            <span className="muted-text">Sin CV</span>
-                          )}
-                        </td>
-                        <td>
-                          <div className="row-actions">
-                            <button
-                              className="icon-button"
-                              type="button"
-                              onClick={() => openModal({ type: "edit", applicationId: application.id })}
-                              title="Editar"
-                            >
-                              <Pencil size={16} aria-hidden="true" />
-                              <span className="sr-only">Editar</span>
-                            </button>
-                            <button
-                              className="icon-button danger"
-                              type="button"
-                              onClick={() => openModal({ type: "delete", applicationId: application.id })}
-                              title="Eliminar"
-                            >
-                              <Trash2 size={16} aria-hidden="true" />
-                              <span className="sr-only">Eliminar</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                            {application.latestNote ? (
+                              <p className="note-preview">{markdownTextPreview(application.latestNote)}</p>
+                            ) : null}
+                          </td>
+                          <td>
+                            {(application.cvStoredName || application.cvVersion) ? (
+                              <button
+                                className="text-button"
+                                type="button"
+                                onClick={() => openModal({ type: "previewCv", applicationId: application.id })}
+                              >
+                                <FileText size={15} aria-hidden="true" />
+                                Ver CV
+                              </button>
+                            ) : (
+                              <span className="muted-text">Sin CV</span>
+                            )}
+                          </td>
+                          <td>
+                            <div className="row-actions">
+                              <button
+                                className="icon-button"
+                                type="button"
+                                onClick={() => openModal({ type: "edit", applicationId: application.id })}
+                                title="Editar"
+                              >
+                                <Pencil size={16} aria-hidden="true" />
+                                <span className="sr-only">Editar</span>
+                              </button>
+                              <button
+                                className="icon-button danger"
+                                type="button"
+                                onClick={() => openModal({ type: "delete", applicationId: application.id })}
+                                title="Eliminar"
+                              >
+                                <Trash2 size={16} aria-hidden="true" />
+                                <span className="sr-only">Eliminar</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <div className="kanban-board">
                 {statuses.filter(s => statusFilter === "todos" || statusFilter === s).map((status) => {
@@ -938,16 +947,23 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                         {columnApps.map((application) => (
                           <div
                             key={application.id}
-                            className={`kanban-card ${draggedAppId === application.id ? 'dragging' : ''}`}
+                            className={`kanban-card ${draggedAppId === application.id ? 'dragging' : ''} ${isApplicationStale(application) ? 'stale' : ''}`}
                             draggable
                             onDragStart={(e) => handleDragStart(e, application.id)}
                             onDragEnd={() => setDraggedAppId(null)}
                           >
-                            <div className="kanban-card-title">{application.nombreEmpresa}</div>
+                            <div className="kanban-card-title">
+                              {application.nombreEmpresa}
+                              {isApplicationStale(application) && (
+                                <span className="stale-badge" title="Acción requerida: Han pasado más de 7 días sin novedades.">
+                                  <AlertCircle size={14} />
+                                </span>
+                              )}
+                            </div>
                             {application.textoPostulacion ? (
                               <div className="kanban-card-desc">{applicationTextPreview(application.textoPostulacion)}</div>
                             ) : null}
-                            
+
                             <div className="kanban-card-footer">
                               <span className="kanban-date">
                                 {new Date(application.createdAt).toLocaleDateString()}
@@ -1000,8 +1016,8 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
             <div className="cv-sidebar">
               <div className="cv-sidebar-header">
                 <h3>Versiones</h3>
-                <button 
-                  className="icon-button" 
+                <button
+                  className="icon-button"
                   onClick={() => { setSaveAsName(""); setShowSaveAsModal(true); }}
                   title="Duplicar versión actual"
                 >
@@ -1011,8 +1027,8 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
               <div className="cv-version-list">
                 {cvVersions.map((v) => (
                   <div key={v} className={`cv-version-item ${activeVersion === v ? "active" : ""}`}>
-                    <button 
-                      className="cv-version-name" 
+                    <button
+                      className="cv-version-name"
                       onClick={() => setActiveVersion(v)}
                       title={`Seleccionar ${v}`}
                     >
@@ -1020,22 +1036,22 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                       <span>{v}</span>
                     </button>
                     <div className="cv-version-actions">
-                        <button 
-                          className="icon-button"
-                          title="Renombrar versión"
-                          onClick={() => { setRenameTarget(v); setNewName(v); setShowRenameModal(true); }}
-                        >
-                          <Pencil size={12} />
-                        </button>
-                        <button 
-                          className="icon-button danger"
-                          title="Eliminar versión"
-                          onClick={() => handleDeleteVersion(v)}
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                      </div>
+                      <button
+                        className="icon-button"
+                        title="Renombrar versión"
+                        onClick={() => { setRenameTarget(v); setNewName(v); setShowRenameModal(true); }}
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      <button
+                        className="icon-button danger"
+                        title="Eliminar versión"
+                        onClick={() => handleDeleteVersion(v)}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1047,103 +1063,103 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                   <div className="cv-top-bar">
                     <div className="cv-top-bar-left">
                       <span className="cv-version-label">Editando: {activeVersion}</span>
-                </div>
-                <div className="cv-compile-inline">
-                  {compileStatus === "compiling" && (
-                    <span className="compile-status compiling" title="Compilando...">
-                      <span className="spinner-small" aria-hidden="true"></span>
-                    </span>
-                  )}
-                  {compileStatus === "success" && (
-                    <span className="compile-status success" title="¡Listo!">✓</span>
-                  )}
-                  {compileStatus === "error" && (
-                    <span className="compile-status error" title="Error">!</span>
-                  )}
-                  <button
-                    className="primary-button icon-only"
-                    type="button"
-                    onClick={handleCompile}
-                    disabled={compileStatus === "compiling"}
-                    title="Forzar Compilación"
-                  >
-                    <Play size={15} aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="cv-codemirror-wrapper">
-                <CodeMirror
-                  value={cvYaml}
-                  height="100%"
-                  extensions={[yaml(), EditorView.lineWrapping, wrappedLineIndent]}
-                  theme={theme === "dark" ? vscodeDark : vscodeLight}
-                  onChange={(value) => handleYamlChange(value)}
-                  basicSetup={{
-                    lineNumbers: true,
-                    highlightActiveLineGutter: true,
-                    foldGutter: true,
-                    tabSize: 2,
-                  }}
-                />
-              </div>
-
-              {compileError && (
-                <div className="cv-error-log">{compileError}</div>
-              )}
-            </div>
-
-            {/* Preview panel */}
-            <div className="cv-preview-panel">
-              <header className="cv-editor-header">
-                <h2>Vista previa en vivo</h2>
-                {previewVersion > 0 && (
-                  <a
-                    className="inline-link"
-                    href={`/api/cv/pdf?version=${activeVersion}&v=${previewVersion}`}
-                    download={`${activeVersion}_cv.pdf`}
-                  >
-                    <FileText size={14} aria-hidden="true" />
-                    Descargar PDF
-                  </a>
-                )}
-              </header>
-
-              <div className="cv-preview-container">
-                {compileStatus === "compiling" && previewVersion === 0 ? (
-                  <div className="cv-preview-empty">
-                    <span className="compile-status compiling">Compilando...</span>
-                  </div>
-                ) : previewVersion === 0 ? (
-                  <div className="cv-preview-empty">
-                    <p>No hay vista previa aún.</p>
-                    <button className="secondary-button" type="button" onClick={handleCompile}>
-                      Compilar ahora
-                    </button>
-                  </div>
-                ) : (
-                  <div className="cv-preview-image-wrapper">
-                    {compileStatus === "compiling" && (
-                      <div className="cv-preview-overlay">
-                        <div className="spinner"></div>
-                        <span>Actualizando...</span>
-                      </div>
-                    )}
-                    <div className="cv-preview-pages-container">
-                      {Array.from({ length: cvPageCount }).map((_, i) => (
-                        <img
-                          key={`${previewVersion}-${i}`}
-                          src={`/api/cv/preview?version=${activeVersion}&page=${i + 1}&v=${previewVersion}`}
-                          alt={`Vista previa del CV página ${i + 1}`}
-                          className={`cv-preview-image ${compileStatus === "compiling" ? "compiling" : ""}`}
-                        />
-                      ))}
+                    </div>
+                    <div className="cv-compile-inline">
+                      {compileStatus === "compiling" && (
+                        <span className="compile-status compiling" title="Compilando...">
+                          <span className="spinner-small" aria-hidden="true"></span>
+                        </span>
+                      )}
+                      {compileStatus === "success" && (
+                        <span className="compile-status success" title="¡Listo!">✓</span>
+                      )}
+                      {compileStatus === "error" && (
+                        <span className="compile-status error" title="Error">!</span>
+                      )}
+                      <button
+                        className="primary-button icon-only"
+                        type="button"
+                        onClick={handleCompile}
+                        disabled={compileStatus === "compiling"}
+                        title="Forzar Compilación"
+                      >
+                        <Play size={15} aria-hidden="true" />
+                      </button>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
-            </>
+
+                  <div className="cv-codemirror-wrapper">
+                    <CodeMirror
+                      value={cvYaml}
+                      height="100%"
+                      extensions={[yaml(), EditorView.lineWrapping, wrappedLineIndent]}
+                      theme={theme === "dark" ? vscodeDark : vscodeLight}
+                      onChange={(value) => handleYamlChange(value)}
+                      basicSetup={{
+                        lineNumbers: true,
+                        highlightActiveLineGutter: true,
+                        foldGutter: true,
+                        tabSize: 2,
+                      }}
+                    />
+                  </div>
+
+                  {compileError && (
+                    <div className="cv-error-log">{compileError}</div>
+                  )}
+                </div>
+
+                {/* Preview panel */}
+                <div className="cv-preview-panel">
+                  <header className="cv-editor-header">
+                    <h2>Vista previa en vivo</h2>
+                    {previewVersion > 0 && (
+                      <a
+                        className="inline-link"
+                        href={`/api/cv/pdf?version=${activeVersion}&v=${previewVersion}`}
+                        download={`${activeVersion}_cv.pdf`}
+                      >
+                        <FileText size={14} aria-hidden="true" />
+                        Descargar PDF
+                      </a>
+                    )}
+                  </header>
+
+                  <div className="cv-preview-container">
+                    {compileStatus === "compiling" && previewVersion === 0 ? (
+                      <div className="cv-preview-empty">
+                        <span className="compile-status compiling">Compilando...</span>
+                      </div>
+                    ) : previewVersion === 0 ? (
+                      <div className="cv-preview-empty">
+                        <p>No hay vista previa aún.</p>
+                        <button className="secondary-button" type="button" onClick={handleCompile}>
+                          Compilar ahora
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="cv-preview-image-wrapper">
+                        {compileStatus === "compiling" && (
+                          <div className="cv-preview-overlay">
+                            <div className="spinner"></div>
+                            <span>Actualizando...</span>
+                          </div>
+                        )}
+                        <div className="cv-preview-pages-container">
+                          {Array.from({ length: cvPageCount }).map((_, i) => (
+                            <img
+                              key={`${previewVersion}-${i}`}
+                              src={`/api/cv/preview?version=${activeVersion}&page=${i + 1}&v=${previewVersion}`}
+                              alt={`Vista previa del CV página ${i + 1}`}
+                              className={`cv-preview-image ${compileStatus === "compiling" ? "compiling" : ""}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="cv-editor-panel" style={{ alignItems: "center", justifyContent: "center" }}>
                 <div className="cv-preview-empty">
@@ -1244,8 +1260,8 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
               </div>
               <div className="notes-sidebar-list">
                 {activeApplication.notes.map((note) => (
-                  <div 
-                    key={note.id} 
+                  <div
+                    key={note.id}
                     className={`note-sidebar-item ${activeNoteId === note.id ? "active" : ""}`}
                     onClick={() => {
                       setActiveNoteId(note.id);
@@ -1270,7 +1286,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                             if (activeNoteId === note.id) {
                               setActiveNoteId(null);
                             }
-                          }, () => {})();
+                          }, () => { })();
                         }
                       }}
                       title="Eliminar"
@@ -1288,7 +1304,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
             </div>
 
             {activeNoteId !== null ? (
-              <form 
+              <form
                 className="notes-editor-split"
                 action={runAction(async (formData: FormData) => {
                   if (activeNoteId === "new") {
@@ -1299,7 +1315,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                   } else {
                     await updateNota(activeNoteId, formData);
                   }
-                }, () => {})}
+                }, () => { })}
               >
                 <div className="notes-editor-split-header">
                   <input
@@ -1359,7 +1375,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
       {modal?.type === "previewCv" && activeApplication ? (
         <Modal title={`CV de postulacion a ${activeApplication.nombreEmpresa}`} onClose={closeModal} wide>
           <div className="modal-body" style={{ height: '70vh', padding: 0 }}>
-            <iframe 
+            <iframe
               src={activeApplication.cvVersion ? `/api/cv/pdf?version=${activeApplication.cvVersion}&v=1` : cvHref(activeApplication)}
               style={{ width: '100%', height: '100%', border: 'none' }}
               title="Vista previa del CV"

@@ -20,8 +20,8 @@ Este documento contiene ideas y futuras funcionalidades a implementar en **Postu
 - [x] **Panel de Acción Requerida**: Integrar con el Sistema de Seguimiento (abajo) para mostrar a qué empresas debes mandar email hoy.
 
 ## ⏰ Sistema de Seguimiento (Follow-ups)
-- [ ] Agregar alertas visuales para postulaciones que llevan mucho tiempo (ej. 7-10 días) en estado `Aplicado` sin actualizaciones.
-- [ ] Crear una sección de "Acción Requerida" para no olvidar contactar a los reclutadores.
+- [x] Agregar alertas visuales para postulaciones que llevan mucho tiempo (ej. 7-10 días) en estado `Aplicado` sin actualizaciones.
+- [x] Crear una sección de "Acción Requerida" para no olvidar contactar a los reclutadores.
 
 ## 💰 Tracker de Entrevistas y Salarios
 - [ ] Mejorar el modelo de datos o el formulario cuando el estado pasa a `Entrevista`.

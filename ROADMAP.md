@@ -3,9 +3,9 @@
 Este documento contiene ideas y futuras funcionalidades a implementar en **Postulaciones Fast** para evolucionar el MVP.
 
 ## 📋 Tablero Kanban (Drag & Drop)
-- [ ] Crear una vista de Tablero (tipo Trello).
-- [ ] Configurar columnas basadas en los estados: `Pendiente`, `Aplicado`, `Entrevista`, `Rechazado`.
-- [ ] Implementar la funcionalidad de arrastrar y soltar (drag & drop) para actualizar el estado de una postulación fácilmente.
+- [x] Crear una vista de Tablero (tipo Trello).
+- [x] Configurar columnas basadas en los estados: `Pendiente`, `Aplicado`, `Entrevista`, `Rechazado`.
+- [x] Implementar la funcionalidad de arrastrar y soltar (drag & drop) para actualizar el estado de una postulación fácilmente.
 
 ## 🤖 Generador de Cover Letters con IA
 - [ ] Integrar la API de IA (Gemini / OpenAI).

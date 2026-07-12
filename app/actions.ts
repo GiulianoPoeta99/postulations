@@ -12,6 +12,7 @@ import {
   isApplicationStatus,
   softDeleteApplication,
   updateApplication,
+  updateApplicationStatus,
   createApplicationNote,
   updateApplicationNote,
   softDeleteApplicationNote,
@@ -114,6 +115,13 @@ export async function updatePostulacion(id: number, formData: FormData) {
 export async function deletePostulacion(id: number) {
   softDeleteApplication(id);
   revalidatePath("/");
+}
+
+export async function updateStatusAction(id: number, status: string) {
+  if (isApplicationStatus(status)) {
+    updateApplicationStatus(id, status);
+    revalidatePath("/");
+  }
 }
 
 export async function createNota(postulacionId: number, formData: FormData) {

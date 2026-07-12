@@ -37,7 +37,8 @@ import {
   getCvVersion,
   saveCvVersion,
   deleteCvVersion,
-  renameCvVersion
+  renameCvVersion,
+  updateStatusAction
 } from "@/app/actions";
 import type { Application, ApplicationStatus } from "@/lib/db";
 
@@ -234,6 +235,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
   const [error, setError] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [activeTab, setActiveTab] = useState<"postulaciones" | "cv">("postulaciones");
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
 
   // Table search/filter
   const [searchText, setSearchText] = useState("");
@@ -439,6 +441,39 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
     return applications.find((a) => a.id === modal.applicationId) ?? null;
   }, [applications, modal]);
 
+  // ----- Drag and Drop -----
+  const [draggedAppId, setDraggedAppId] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, id: number) => {
+    setDraggedAppId(id);
+    e.dataTransfer.effectAllowed = "move";
+    // For Firefox compatibility
+    e.dataTransfer.setData("text/plain", id.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetStatus: ApplicationStatus) => {
+    e.preventDefault();
+    if (!draggedAppId) return;
+
+    const app = applications.find(a => a.id === draggedAppId);
+    if (app && app.estado !== targetStatus) {
+      setPending(true);
+      try {
+        await updateStatusAction(draggedAppId, targetStatus);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "Error updating status.");
+      } finally {
+        setPending(false);
+      }
+    }
+    setDraggedAppId(null);
+  };
+
   // ----- Helpers -----
 
   function openModal(state: ModalState) {
@@ -548,11 +583,29 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                   </button>
                 ))}
               </div>
+
+              <div className="view-toggle">
+                <button
+                  className={viewMode === "list" ? "active" : ""}
+                  onClick={() => setViewMode("list")}
+                  title="Vista de lista"
+                >
+                  Lista
+                </button>
+                <button
+                  className={viewMode === "kanban" ? "active" : ""}
+                  onClick={() => setViewMode("kanban")}
+                  title="Tablero Kanban"
+                >
+                  Kanban
+                </button>
+              </div>
             </div>
 
-            <div className="table-frame">
-              <table>
-                <thead>
+            {viewMode === "list" ? (
+              <div className="table-frame">
+                <table>
+                  <thead>
                   <tr>
                     <th className="id-col">ID</th>
                     <th>Empresa</th>
@@ -668,6 +721,77 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                 </tbody>
               </table>
             </div>
+            ) : (
+              <div className="kanban-board">
+                {statuses.filter(s => statusFilter === "todos" || statusFilter === s).map((status) => {
+                  const columnApps = filteredApplications.filter((app) => app.estado === status);
+                  return (
+                    <div
+                      key={status}
+                      className="kanban-column"
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, status)}
+                    >
+                      <div className="kanban-column-header">
+                        {statusLabels[status]}
+                        <span className="badge">{columnApps.length}</span>
+                      </div>
+                      <div className="kanban-cards">
+                        {columnApps.map((application) => (
+                          <div
+                            key={application.id}
+                            className={`kanban-card ${draggedAppId === application.id ? 'dragging' : ''}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, application.id)}
+                            onDragEnd={() => setDraggedAppId(null)}
+                          >
+                            <div className="kanban-card-title">{application.nombreEmpresa}</div>
+                            {application.textoPostulacion ? (
+                              <div className="kanban-card-desc">{applicationTextPreview(application.textoPostulacion)}</div>
+                            ) : null}
+                            
+                            <div className="kanban-card-footer">
+                              <span className="kanban-date">
+                                {new Date(application.createdAt).toLocaleDateString()}
+                              </span>
+                              <div className="kanban-card-actions">
+                                <button
+                                  className="icon-button"
+                                  type="button"
+                                  onClick={() => {
+                                    if (application.notes && application.notes.length > 0) {
+                                      setActiveNoteId(application.notes[0].id);
+                                      setNoteEditingTitle(application.notes[0].title);
+                                      setNoteEditingContent(application.notes[0].content);
+                                    } else {
+                                      setActiveNoteId("new");
+                                      setNoteEditingTitle("Nueva Nota");
+                                      setNoteEditingContent("");
+                                    }
+                                    openModal({ type: "notes", applicationId: application.id });
+                                  }}
+                                  title="Ver notas"
+                                >
+                                  <MessageSquareText size={14} aria-hidden="true" />
+                                </button>
+                                <button
+                                  className="icon-button"
+                                  type="button"
+                                  onClick={() => openModal({ type: "edit", applicationId: application.id })}
+                                  title="Editar"
+                                >
+                                  <Pencil size={14} aria-hidden="true" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </>
         ) : null}
 

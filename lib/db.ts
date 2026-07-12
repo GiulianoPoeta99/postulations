@@ -433,6 +433,17 @@ export function updateApplication(id: number, input: ApplicationInput, cv?: CvIn
   });
 }
 
+export function updateApplicationStatus(id: number, status: ApplicationStatus): void {
+  db.prepare(
+    `
+      UPDATE postulaciones
+      SET estado = @status
+      WHERE id = @id
+        AND deleted_at IS NULL
+    `
+  ).run({ id, status });
+}
+
 export function softDeleteApplication(id: number): void {
   db.prepare(
     `

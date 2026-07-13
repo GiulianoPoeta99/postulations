@@ -18,6 +18,7 @@ export type ApplicationNote = {
 
 export type Application = {
   id: number;
+  titulo: string;
   nombreEmpresa: string;
   linkPropuesta: string;
   estado: ApplicationStatus;
@@ -35,6 +36,7 @@ export type Application = {
 };
 
 export type ApplicationInput = {
+  titulo: string;
   nombreEmpresa: string;
   linkPropuesta: string;
   estado: ApplicationStatus;
@@ -49,6 +51,7 @@ export type CvInput = {
 
 type ApplicationRow = {
   id: number;
+  titulo: string;
   nombre_empresa: string;
   link_propuesta: string;
   estado: ApplicationStatus;
@@ -140,6 +143,7 @@ function ensureApplicationStatusConstraint(database: Database.Database) {
 
       CREATE TABLE postulaciones_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        titulo TEXT NOT NULL DEFAULT '',
         nombre_empresa TEXT NOT NULL,
         link_propuesta TEXT NOT NULL DEFAULT '',
         estado TEXT NOT NULL CHECK (estado IN (${applicationStatusCheck})) DEFAULT 'aplicado',
@@ -155,6 +159,7 @@ function ensureApplicationStatusConstraint(database: Database.Database) {
 
       INSERT INTO postulaciones_new (
         id,
+        titulo,
         nombre_empresa,
         link_propuesta,
         estado,
@@ -169,6 +174,7 @@ function ensureApplicationStatusConstraint(database: Database.Database) {
       )
       SELECT
         id,
+        titulo,
         nombre_empresa,
         link_propuesta,
         CASE
@@ -207,6 +213,7 @@ function migrateDatabase(database: Database.Database) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS postulaciones (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      titulo TEXT NOT NULL DEFAULT '',
       nombre_empresa TEXT NOT NULL,
       link_propuesta TEXT NOT NULL DEFAULT '',
       estado TEXT NOT NULL CHECK (estado IN (${applicationStatusCheck})) DEFAULT 'aplicado',
@@ -221,6 +228,7 @@ function migrateDatabase(database: Database.Database) {
     );
   `);
 
+  addColumnIfMissing(database, "postulaciones", "titulo", "TEXT NOT NULL DEFAULT ''");
   addColumnIfMissing(database, "postulaciones", "notas", "TEXT NOT NULL DEFAULT ''");
   addColumnIfMissing(database, "postulaciones", "texto_postulacion", "TEXT NOT NULL DEFAULT ''");
   addColumnIfMissing(database, "postulaciones", "cv_filename", "TEXT NOT NULL DEFAULT ''");
@@ -290,6 +298,7 @@ function mapApplication(row: ApplicationRow): Application {
 
   return {
     id: row.id,
+    titulo: row.titulo,
     nombreEmpresa: row.nombre_empresa,
     linkPropuesta: row.link_propuesta,
     estado: row.estado,
@@ -326,6 +335,7 @@ export function listApplications(): Application[] {
       `
       SELECT
         p.id,
+        p.titulo,
         p.nombre_empresa,
         p.link_propuesta,
         p.estado,
@@ -381,6 +391,7 @@ export function createApplication(input: ApplicationInput, cv?: CvInput | null):
     .prepare(
       `
       INSERT INTO postulaciones (
+        titulo,
         nombre_empresa,
         link_propuesta,
         estado,
@@ -390,6 +401,7 @@ export function createApplication(input: ApplicationInput, cv?: CvInput | null):
         cv_version
       )
       VALUES (
+        @titulo,
         @nombreEmpresa,
         @linkPropuesta,
         @estado,
@@ -414,7 +426,8 @@ export function updateApplication(id: number, input: ApplicationInput, cv?: CvIn
   db.prepare(
     `
       UPDATE postulaciones
-      SET nombre_empresa = @nombreEmpresa,
+      SET titulo = @titulo,
+          nombre_empresa = @nombreEmpresa,
           link_propuesta = @linkPropuesta,
           estado = @estado,
           texto_postulacion = @textoPostulacion,

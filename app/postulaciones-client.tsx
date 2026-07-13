@@ -4,6 +4,7 @@ import {
   AlertCircle,
   Clock,
   ExternalLink,
+  Eye,
   FileText,
   FlaskConical,
   HelpCircle,
@@ -63,6 +64,7 @@ type ModalState =
   | { type: "delete"; applicationId: number }
   | { type: "notes"; applicationId: number }
   | { type: "previewCv"; applicationId: number }
+  | { type: "view"; applicationId: number }
   | null;
 
 type PostulacionesClientProps = {
@@ -118,6 +120,15 @@ export function ApplicationFields({ application, includeInitialNote = false, cvV
           placeholder="Nombre empresa"
           required
           defaultValue={application?.nombreEmpresa ?? ""}
+        />
+      </label>
+
+      <label className="field">
+        <span>Título</span>
+        <input
+          name="titulo"
+          placeholder="Ej: Backend Developer"
+          defaultValue={application?.titulo ?? ""}
         />
       </label>
 
@@ -830,6 +841,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                           <td>
                             <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
                               <strong>{application.nombreEmpresa}</strong>
+                              {application.titulo && <span style={{ color: "var(--muted)", fontSize: "0.9em" }}>- {application.titulo}</span>}
                               {isApplicationStale(application) && (
                                 <span className="stale-badge" title="Acción requerida: Han pasado más de 7 días sin novedades.">
                                   <AlertCircle size={14} />
@@ -905,6 +917,15 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                               <button
                                 className="icon-button"
                                 type="button"
+                                onClick={() => openModal({ type: "view", applicationId: application.id })}
+                                title="Ver detalle"
+                              >
+                                <Eye size={16} aria-hidden="true" />
+                                <span className="sr-only">Ver detalle</span>
+                              </button>
+                              <button
+                                className="icon-button"
+                                type="button"
                                 onClick={() => openModal({ type: "edit", applicationId: application.id })}
                                 title="Editar"
                               >
@@ -954,6 +975,7 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                           >
                             <div className="kanban-card-title">
                               {application.nombreEmpresa}
+                              {application.titulo && <div style={{ fontSize: "0.85em", color: "var(--muted)", fontWeight: "normal", marginTop: 2 }}>{application.titulo}</div>}
                               {isApplicationStale(application) && (
                                 <span className="stale-badge" title="Acción requerida: Han pasado más de 7 días sin novedades.">
                                   <AlertCircle size={14} />
@@ -969,6 +991,14 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                                 {new Date(application.createdAt).toLocaleDateString()}
                               </span>
                               <div className="kanban-card-actions">
+                                <button
+                                  className="icon-button"
+                                  type="button"
+                                  onClick={() => openModal({ type: "view", applicationId: application.id })}
+                                  title="Ver detalle"
+                                >
+                                  <Eye size={14} aria-hidden="true" />
+                                </button>
                                 <button
                                   className="icon-button"
                                   type="button"
@@ -1380,6 +1410,56 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
               style={{ width: '100%', height: '100%', border: 'none' }}
               title="Vista previa del CV"
             />
+          </div>
+        </Modal>
+      ) : null}
+
+      {modal?.type === "view" && activeApplication ? (
+        <Modal title={`Detalle de Postulación`} onClose={closeModal} wide>
+          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <strong>Empresa:</strong>
+                <p>{activeApplication.nombreEmpresa}</p>
+              </div>
+              <div>
+                <strong>Título:</strong>
+                <p>{activeApplication.titulo || "N/A"}</p>
+              </div>
+              <div>
+                <strong>Estado:</strong>
+                <p><span className={`status-pill ${activeApplication.estado}`}>{statusLabels[activeApplication.estado]}</span></p>
+              </div>
+              <div>
+                <strong>Link Propuesta:</strong>
+                <p>
+                  {activeApplication.linkPropuesta ? (
+                    <a className="inline-link" href={activeApplication.linkPropuesta} target="_blank" rel="noreferrer">
+                      <ExternalLink size={14} aria-hidden="true" /> Ver link
+                    </a>
+                  ) : "N/A"}
+                </p>
+              </div>
+            </div>
+            <div>
+              <strong>Texto de la Postulación:</strong>
+              <div className="markdown-note" style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '6px', whiteSpace: 'pre-wrap', marginTop: '0.5rem' }}>
+                {activeApplication.textoPostulacion || "Sin texto."}
+              </div>
+            </div>
+            {activeApplication.notes && activeApplication.notes.length > 0 && (
+              <div>
+                <strong>Última Nota:</strong>
+                <div className="markdown-note" style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '6px', marginTop: '0.5rem' }}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{activeApplication.notes[0].content}</ReactMarkdown>
+                </div>
+              </div>
+            )}
+            <footer className="modal-footer" style={{ marginTop: 'auto' }}>
+              <button className="primary-button" type="button" onClick={closeModal}>
+                Cerrar
+              </button>
+            </footer>
           </div>
         </Modal>
       ) : null}

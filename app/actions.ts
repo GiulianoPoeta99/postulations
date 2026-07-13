@@ -29,6 +29,7 @@ function readApplicationInput(formData: FormData): ApplicationInput {
   const estado = formString(formData, "estado");
 
   return {
+    titulo: formString(formData, "titulo"),
     nombreEmpresa: formString(formData, "nombreEmpresa"),
     linkPropuesta: formString(formData, "linkPropuesta"),
     estado: isApplicationStatus(estado) ? estado : "aplicado",

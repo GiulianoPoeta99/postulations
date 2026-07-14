@@ -20,6 +20,7 @@ import { Modal } from "../components/Shared";
 
 export function CvClientView() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [cvLanguage, setCvLanguage] = useState<"es" | "en">("es");
   
   // CV Editor states
   const [cvYaml, setCvYaml] = useState("");
@@ -38,8 +39,10 @@ export function CvClientView() {
   // Ref to avoid stale closure in debounce
   const cvYamlRef = useRef(cvYaml);
   const activeVersionRef = useRef(activeVersion);
+  const cvLanguageRef = useRef(cvLanguage);
   useEffect(() => { cvYamlRef.current = cvYaml; }, [cvYaml]);
   useEffect(() => { activeVersionRef.current = activeVersion; }, [activeVersion]);
+  useEffect(() => { cvLanguageRef.current = cvLanguage; }, [cvLanguage]);
 
   useEffect(() => {
     const saved = document.documentElement.getAttribute("data-theme") as "light" | "dark" | null;
@@ -67,11 +70,11 @@ export function CvClientView() {
     }
   }, []);
 
-  const doCompile = useCallback(async (version: string, yaml: string) => {
+  const doCompile = useCallback(async (version: string, yaml: string, lang: string) => {
     setCompileStatus("compiling");
     setCompileError("");
     try {
-      const res = await compileCv(version, yaml);
+      const res = await compileCv(version, yaml, lang);
       if (res.success) {
         setCompileStatus("success");
         if (res.pageCount) setCvPageCount(res.pageCount);
@@ -87,7 +90,7 @@ export function CvClientView() {
   }, []);
 
   const handleCompile = useCallback(() => {
-    doCompile(activeVersionRef.current, cvYamlRef.current);
+    doCompile(activeVersionRef.current, cvYamlRef.current, cvLanguageRef.current);
   }, [doCompile]);
 
   useEffect(() => {
@@ -99,7 +102,7 @@ export function CvClientView() {
     getCvVersion(activeVersion).then((yaml) => {
       if (cancelled) return;
       setCvYaml(yaml);
-      doCompile(activeVersion, yaml);
+      doCompile(activeVersion, yaml, cvLanguageRef.current);
     });
 
     return () => { cancelled = true; };
@@ -111,11 +114,16 @@ export function CvClientView() {
 
     const timer = setTimeout(() => {
       isDirtyRef.current = false;
-      doCompile(activeVersionRef.current, cvYamlRef.current);
+      doCompile(activeVersionRef.current, cvYamlRef.current, cvLanguageRef.current);
     }, 800);
 
     return () => clearTimeout(timer);
   }, [cvYaml, doCompile]);
+
+  useEffect(() => {
+    if (!activeVersionRef.current || !cvYamlRef.current) return;
+    doCompile(activeVersionRef.current, cvYamlRef.current, cvLanguage);
+  }, [cvLanguage, doCompile]);
 
   const handleYamlChange = (val: string) => {
     setCvYaml(val);
@@ -237,6 +245,14 @@ export function CvClientView() {
               <div className="cv-top-bar">
                 <div className="cv-top-bar-left">
                   <span className="cv-version-label">Editando: {activeVersion}</span>
+                  <select 
+                    value={cvLanguage} 
+                    onChange={(e) => setCvLanguage(e.target.value as "es" | "en")}
+                    style={{ marginLeft: 16, padding: "2px 8px", borderRadius: 4, background: "var(--bg-elevated)", color: "var(--text-main)", border: "1px solid var(--border-color)", fontSize: "0.9em" }}
+                  >
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="en">🇬🇧 English</option>
+                  </select>
                 </div>
                 <div className="cv-compile-inline">
                   {compileStatus === "compiling" && (

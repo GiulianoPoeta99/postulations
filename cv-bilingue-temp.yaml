@@ -1,0 +1,366 @@
+cv:
+  name: Giuliano Ignacio Poeta
+  location: "Ushuaia, Tierra del Fuego, Argentina"
+  email: giuliano.poeta.laboral@gmail.com
+  phone: "+54 9 2901 601773"
+  social_networks:
+    - network: LinkedIn
+      username: giuliano-ignacio-poeta
+    - network: GitHub
+      username: GiulianoPoeta99
+
+  # IMPORTANTE: Colocamos shared_data dentro de "cv"
+  shared_data:
+    summary: &shared_summary
+      en: |-
+        **Software engineer** with experience in **full stack development**, systems architecture, and production application operations. I mainly work with **PHP**, **Go**, **Python**, React, and **Next.js**, with a focus on domain modeling, data, integrations, legacy systems, and **applied artificial intelligence**.
+      es: |-
+        **Ingeniero de software** con experiencia en **desarrollo full stack**, arquitectura de sistemas y operación de aplicaciones en producción. Trabajo principalmente con **PHP**, **Go**, **Python**, React y **Next.js**, con foco en modelado de dominio, datos, integraciones, sistemas heredados e **inteligencia artificial aplicada**.
+    
+    jatc: &job_jatc
+      company: "Just Another Tech Company (JATC)"
+      location: "**Ushuaia, Argentina**"
+      start_date: 2025-08
+      end_date: present
+      position:
+        en: "*Technical Lead — Hybrid*"
+        es: "*Líder técnico — Híbrido*"
+      summary:
+        en: |-
+          I technically lead a web project developed with **Go**, **Gin**, and **Next.js**, from client discovery to production deployment.
+        es: |-
+          Lidero técnicamente un proyecto web desarrollado con **Go**, **Gin** y **Next.js**, desde el relevamiento con cliente hasta la puesta en producción.
+      highlights:
+        en:
+          - Gathered domain knowledge, main workflows, and acceptance criteria for the catalog, administration panel, and internal operations.
+          - Designed and implemented a **hexagonal architecture**, separating domain, application, and infrastructure layers.
+          - Designed the relational data model and migration strategy to support product changes.
+          - Implemented HTTP services with Go and Gin, including validations, error handling, pagination, and composable filters.
+          - Coordinated contracts with Next.js applications, continuous deployment, server setup, reverse proxy, firewall, and basic operations.
+        es:
+          - Relevé dominio, flujos principales y criterios de aceptación para catálogo, panel de administración y operación interna.
+          - Diseñé e implementé una **arquitectura hexagonal**, separando dominio, aplicación e infraestructura.
+          - Diseñé la base detos con el modelo relacional y la estrategia de migraciones para acompañar cambios del producto.
+          - Implementé servicios HTTP con Go y Gin, incluyendo validaciones, errores, paginación y filtros composables.
+          - Coordiné contratos con aplicaciones en Next.js, despliegue continuo, servidor, proxy inverso, cortafuegos y operación básica.
+
+    301: &job_301
+      company: "301 Software Factory"
+      location: "**Ushuaia, Argentina**"
+      start_date: 2025-04
+      end_date: 2026-08
+      position:
+        en: "*Full Stack Developer — Remote*"
+        es: "*Desarrollador Full Stack — Remoto*"
+      summary:
+        en: "Worked on a jobs platform built with **PHP**, **Laravel**, **Next.js**, and **Angular**, used by approximately 1,200 companies and more than **1 million** candidates."
+        es: "Trabajé en una plataforma de empleos con **PHP**, **Laravel**, **Next.js** y **Angular**, utilizada por aproximadamente 1.200 empresas y más de **1 millón** de candidatos."
+      highlights:
+        en:
+          - Designed and implemented the psychotechnical assessments module, including domain logic, normalized database design, and services for the internal system and portal.
+          - Developed integrations between the applicant tracking system and the portal for assessments, results, and profile comparison.
+          - Evolved components in PHP, Laravel, Next.js, and Angular, fixing bugs, edge cases, performance issues, and production incidents.
+        es:
+          - Diseñé e implementé el módulo de evaluaciones psicotécnicas, incluyendo dominio, base normalizada y servicios para sistema interno y portal.
+          - Desarrollé integraciones entre el sistema de seguimiento de candidatos y el portal para evaluaciones, resultados y comparación de perfiles.
+          - Evolucioné componentes en PHP, Laravel, Next.js y Angular, corrigiendo errores, casos borde, rendimiento e incidentes en producción.
+
+    dposs: &job_dposs
+      company: "DPOSS"
+      location: "**Ushuaia, Argentina**"
+      start_date: 2022-05
+      end_date: 2025-05
+      position:
+        en: "*Full Stack Developer — On-site*"
+        es: "*Desarrollador Full Stack — Presencial*"
+      summary:
+        en: "Modernized and maintained internal systems with **PHP**, **Yii2**, **Laravel**, **React**, **Inertia**, XML, and **Rust**."
+        es: "Modernicé y mantuve sistemas internos con **PHP**, **Yii2**, **Laravel**, **React**, **Nest.js**, XML y **Rust**."
+      highlights:
+        en:
+          - Rewrote a critical payroll/liquidation system on a legacy PHP platform with a custom framework, XML, and JavaScript.
+          - Developed internal systems with Laravel, React, Inertia, and Yii2, and implemented Rust components for critical processes.
+        es:
+          - Reescribí un sistema crítico de liquidaciones sobre una plataforma PHP heredada con marco propio, XML y JavaScripta *React* y *Nest.js*.
+          - Desarrollé sistemas internos con Laravel, React, Inertia y Yii2, e implementé componentes en Rust para procesos críticos.
+
+    blitzden: &job_blitzden
+      company: "Blitzden"
+      location: "**CABA, Argentina**"
+      start_date: 2019-08
+      end_date: 2020-03
+      position:
+        en: "*Frontend Developer — On-site*"
+        es: "*Desarrollador Frontend — Presencial*"
+      summary:
+        en: "Developed web interfaces with **React**, reusable components, state management, Git, and Jira-based task tracking."
+        es: "Desarrollé interfaces web con **React**, componentes reutilizables, manejo de estado, Git y seguimiento de tareas con Jira."
+
+    synclife: &proj_synclife
+      name: "SyncLife"
+      location: "**UNTDF (asociado)**"
+      start_date: 2024-10
+      end_date: present
+      summary:
+        en: "Collaborative system for creating dashboards with customizable components. Developed with **Kotlin**, **Quarkus**, gRPC, **Kafka**, **n8n**, Authentik, MinIO, Prometheus, and **Next.js**."
+        es: "Sistema colaborativo para creación de tableros con componentes personalizables. Desarrollado con **Kotlin**, **Quarkus**, gRPC, **Kafka**, **n8n**, Authentik, MinIO, Prometheus y **Next.js**."
+      highlights:
+        en:
+          - Designed the main backend with Kotlin and Quarkus, applying domain-driven design and exposing functionality through gRPC.
+          - Implemented automations with Kafka and n8n, authentication with Authentik, file management with MinIO, and observability with Prometheus.
+        es:
+          - Diseñé el servidor principal con Kotlin y Quarkus, aplicando diseño guiado por dominio y exposición mediante gRPC.
+          - Implementé automatizaciones con Kafka y n8n, autenticación con Authentik, archivos con MinIO y observabilidad con Prometheus.
+
+    edu_1: &edu_1
+      institution: "Universidad Nacional de Tierra del Fuego"
+      area:
+        en: "Systems"
+        es: "Sistemas"
+      degree:
+        en: "Bachelor's Degree"
+        es: "Licenciatura"
+      location: "**Ushuaia, Argentina**"
+      start_date: 2021-03
+      end_date: present
+      highlights:
+        en: ["Currently in 5th year"]
+        es: ["Cursando 5.º año"]
+
+    edu_2: &edu_2
+      institution: "Universidad Nacional de Tierra del Fuego"
+      area:
+        en: "Systems"
+        es: "Sistemas"
+      degree:
+        en: "University Systems Analyst"
+        es: "Analista Universitario"
+      location: "**Ushuaia, Argentina**"
+      start_date: 2021-03
+      end_date: present
+      highlights:
+        en: ["1 exam remaining"]
+        es: ["1 examen restante"]
+
+    skills: &skills_list
+      - label:
+          en: "Languages"
+          es: "Lenguajes"
+        details: "PHP, Go, Python, Kotlin, JavaScript/TypeScript, Rust, SQL"
+      - label:
+          en: "Frameworks and libraries"
+          es: "Frameworks y bibliotecas"
+        details: "Laravel, Gin, Quarkus, Yii2, React, Next.js, Angular, Inertia"
+      - label:
+          en: "Architecture, data, and integration"
+          es: "Arquitectura, datos e integración"
+        details: "Hexagonal architecture, domain-driven design, MVC, HTTP APIs, gRPC, PostgreSQL, MySQL, MariaDB, Kafka"
+      - label:
+          en: "Operations and quality"
+          es: "Operación y calidad"
+        details: "Docker, Git, continuous deployment, code review, testing, static analysis, incidents, Prometheus, MinIO, Authentik, n8n"
+
+    langs: &langs_list
+      - label:
+          en: "Spanish"
+          es: "Español"
+        details:
+          en: "Native"
+          es: "Nativo"
+      - label:
+          en: "English"
+          es: "Inglés"
+        details:
+          en: "A2 (basic) — technical reading"
+          es: "A2 (básico) — lectura técnica"
+
+  sections:
+    en:
+      Summary:
+        - *shared_summary
+      Experience:
+        - *job_jatc
+        - *job_301
+        - *job_dposs
+        - *job_blitzden
+      Projects:
+        - *proj_synclife
+      Education:
+        - *edu_1
+        - *edu_2
+      Skills: *skills_list
+      Languages: *langs_list
+    es:
+      Resumen:
+        - *shared_summary
+      Experiencia:
+        - *job_jatc
+        - *job_301
+        - *job_dposs
+        - *job_blitzden
+      Proyectos:
+        - *proj_synclife
+      Educación:
+        - *edu_1
+        - *edu_2
+      Habilidades: *skills_list
+      Idiomas: *langs_list
+
+design:
+  theme: classic
+  page:
+    size: a4
+    top_margin: 0.7in
+    bottom_margin: 0.7in
+    left_margin: 0.7in
+    right_margin: 0.7in
+    show_footer: false
+    show_top_note: false
+  colors:
+    body: rgb(0, 0, 0)
+    name: rgb(0, 79, 144)
+    headline: rgb(0, 79, 144)
+    connections: rgb(0, 79, 144)
+    section_titles: rgb(0, 79, 144)
+    links: rgb(0, 79, 144)
+    footer: rgb(128, 128, 128)
+    top_note: rgb(128, 128, 128)
+  typography:
+    line_spacing: 0.6em
+    alignment: justified
+    date_and_location_column_alignment: right
+    font_family:
+      body: Source Sans 3
+      name: Source Sans 3
+      headline: Source Sans 3
+      connections: Source Sans 3
+      section_titles: Source Sans 3
+    font_size:
+      body: 10pt
+      name: 30pt
+      headline: 10pt
+      connections: 10pt
+      section_titles: 1.4em
+    small_caps:
+      name: false
+      headline: false
+      connections: false
+      section_titles: false
+    bold:
+      name: true
+      headline: false
+      connections: false
+      section_titles: true
+  links:
+    underline: true
+    show_external_link_icon: true
+  header:
+    alignment: center
+    photo_width: 3.5cm
+    photo_position: left
+    photo_space_left: 0.4cm
+    photo_space_right: 0.4cm
+    space_below_name: 0.7cm
+    space_below_headline: 0.7cm
+    space_below_connections: 0.7cm
+    connections:
+      phone_number_format: national
+      hyperlink: true
+      show_icons: true
+      display_urls_instead_of_usernames: false
+      separator: ''
+      space_between_connections: 0.5cm
+  section_titles:
+    type: with_partial_line
+    line_thickness: 0.5pt
+    space_above: 0.5cm
+    space_below: 0.3cm
+  sections:
+    allow_page_break: true
+    space_between_regular_entries: 1.2em
+    space_between_text_based_entries: 0.3em
+    show_time_spans_in:
+      - experience
+      - experiencia
+  entries:
+    date_and_location_width: 3.5cm
+    side_space: 0.2cm
+    space_between_columns: 0.1cm
+    allow_page_break: false
+    short_second_row: true
+    degree_width: 0pt
+    summary:
+      space_above: 0cm
+      space_left: 0cm
+    highlights:
+      bullet: •
+      nested_bullet: •
+      space_left: 0.15cm
+      space_above: 0cm
+      space_between_items: 0cm
+      space_between_bullet_and_text: 0.5em
+  templates:
+    footer: '*NAME -- PAGE_NUMBER/TOTAL_PAGES*'
+    top_note: '*LAST_UPDATED CURRENT_DATE*'
+    single_date: MONTH_ABBREVIATION YEAR
+    date_range: START_DATE – END_DATE
+    time_span:
+      en: HOW_MANY_YEARS YEARS HOW_MANY_MONTHS MONTHS
+      es: HOW_MANY_YEARS AÑOS HOW_MANY_MONTHS MESES
+    one_line_entry:
+      main_column: '**LABEL:** DETAILS'
+    education_entry:
+      main_column:
+        en: |-
+          **INSTITUTION**
+          *DEGREE in AREA*
+          SUMMARY
+          HIGHLIGHTS
+        es: |-
+          **INSTITUTION**
+          *DEGREE en AREA*
+          SUMMARY
+          HIGHLIGHTS
+      degree_column: ''
+      date_and_location_column: |-
+        LOCATION
+        DATE
+    normal_entry:
+      main_column: |-
+        **NAME**
+        SUMMARY
+        HIGHLIGHTS
+      date_and_location_column: |-
+        LOCATION
+        DATE
+    experience_entry:
+      main_column: |-
+        **COMPANY**, POSITION
+        SUMMARY
+        HIGHLIGHTS
+      date_and_location_column: |-
+        LOCATION
+        DATE
+    publication_entry:
+      main_column: |-
+        **TITLE**
+        SUMMARY
+        AUTHORS
+        URL (JOURNAL)
+      date_and_location_column: DATE
+
+locale:
+  en:
+    language: english
+    present: present
+    month_abbreviations: [Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec]
+    month_names: [January, February, March, April, May, June, July, August, September, October, November, December]
+  es:
+    language: spanish
+    present: presente
+    month_abbreviations: [Ene, Feb, Mar, Abr, May, Jun, Jul, Ago, Sept, Oct, Nov, Dic]
+    month_names: [Enero, Febrero, Marzo, Abril, Mayo, Junio, Julio, Agosto, Septiembre, Octubre, Noviembre, Diciembre]
+
+settings:
+  current_date: today
+  pdf_title: Giuliano Poeta - CV

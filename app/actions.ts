@@ -5,6 +5,28 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
+import { parse, stringify } from "yaml";
+
+function resolveLanguage(obj: any, lang: string): any {
+  if (Array.isArray(obj)) {
+    return obj.map(item => resolveLanguage(item, lang));
+  }
+  if (obj !== null && typeof obj === "object") {
+    const keys = Object.keys(obj);
+    const isTranslationObj = keys.every(k => ["en", "es", "pt", "fr", "de", "it"].includes(k));
+    
+    if (isTranslationObj && obj[lang] !== undefined) {
+      return resolveLanguage(obj[lang], lang);
+    }
+    
+    const newObj: any = {};
+    for (const key of keys) {
+      newObj[key] = resolveLanguage(obj[key], lang);
+    }
+    return newObj;
+  }
+  return obj;
+}
 import {
   createApplication,
   getCvFilePath,
@@ -259,13 +281,31 @@ export async function renameCvVersion(oldName: string, newName: string): Promise
   }
 }
 
-export async function compileCv(name: string, yamlContent: string): Promise<{ success: boolean; error?: string; pageCount?: number }> {
+export async function compileCv(name: string, yamlContent: string, language?: string): Promise<{ success: boolean; error?: string; pageCount?: number }> {
   try {
     ensureVersionsDir();
     const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "");
     if (!sanitized) return { success: false, error: "Nombre inválido." };
     const versionPath = path.join(versionsDir, `${sanitized}.yaml`);
     fs.writeFileSync(versionPath, yamlContent, "utf-8");
+
+    let compilePath = versionPath;
+    if (language) {
+      try {
+        const obj = parse(yamlContent);
+        const resolved = resolveLanguage(obj, language);
+        
+        // Remove shared_data from cv where it actually resides
+        if (resolved && resolved.cv && resolved.cv.shared_data) {
+          delete resolved.cv.shared_data;
+        }
+        
+        compilePath = path.join(versionsDir, `${sanitized}_compiled.yaml`);
+        fs.writeFileSync(compilePath, stringify(resolved), "utf-8");
+      } catch (err) {
+        console.error("YAML preprocessing error:", err);
+      }
+    }
 
     fs.mkdirSync(outputDir, { recursive: true });
 
@@ -279,8 +319,16 @@ export async function compileCv(name: string, yamlContent: string): Promise<{ su
 
     const pdfOutputPath = path.join(outputDir, `${sanitized}.pdf`);
     const pngOutputPath = path.join(outputDir, `${sanitized}.png`);
-    const cmd = `python3 -m rendercv render "${versionPath}" -o "${outputDir}" --pdf-path "${pdfOutputPath}" --png-path "${pngOutputPath}" --dont-generate-markdown --dont-generate-html`;
-    execSync(cmd, { stdio: "pipe" });
+    
+    try {
+      const cmd = `python3 -m rendercv render "${compilePath}" -o "${outputDir}" --pdf-path "${pdfOutputPath}" --png-path "${pngOutputPath}" --dont-generate-markdown --dont-generate-html`;
+      execSync(cmd, { stdio: "pipe" });
+    } finally {
+      // Always clean up the temporary compiled YAML to avoid garbage files
+      if (compilePath !== versionPath && fs.existsSync(compilePath)) {
+        fs.unlinkSync(compilePath);
+      }
+    }
 
     const newPngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${sanitized}_`) && f.endsWith(".png"));
     

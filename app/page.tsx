@@ -64,9 +64,9 @@ export default function Home() {
   }, {} as Record<string, { total: number; interviews: number }>);
 
   return (
-    <div className="dashboard-grid">
+    <div className="dashboard-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '24px', minHeight: 'calc(100vh - 130px)', padding: '12px 0 24px 0' }}>
       {/* GOALS HERO WIDGET */}
-      <div className="dashboard-card goals-hero-card">
+      <div className="dashboard-card goals-hero-card" style={{ flexShrink: 0 }}>
         <h3>
           <div className="widget-title-left">
             <Target size={18} /> Rendimiento y Objetivos
@@ -118,124 +118,130 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Funnel Card */}
-      <div className="dashboard-card">
-        <h3>
-          <div className="widget-title-left">
-            <TrendingUp size={18} /> Embudo de Conversión
-          </div>
-          <div className="widget-help-container">
-            <HelpCircle size={16} className="widget-help-icon" />
-            <div className="widget-tooltip">
-              Compara el total de postulaciones enviadas con las que lograron avanzar a la etapa de entrevista. Te ayuda a diagnosticar si tu CV está funcionando.
+      <div className="dashboard-bottom-row" style={{ display: 'flex', gap: '24px', flex: 1, flexWrap: 'wrap' }}>
+        {/* Funnel Card */}
+        <div className="dashboard-card" style={{ flex: '1 1 300px' }}>
+          <h3>
+            <div className="widget-title-left">
+              <TrendingUp size={18} /> Embudo de Conversión
             </div>
-          </div>
-        </h3>
-
-        <div className="metric-hero">
-          <span className="metric-hero-value">{conversionRate}%</span>
-          <span className="metric-hero-label">Tasa de Éxito</span>
-        </div>
-
-        <div className="progress-container">
-          <div className="progress-label">
-            <span>Enviadas: {totalApplied}</span>
-            <span>Entrevistas: {totalInterviews}</span>
-          </div>
-          <div className="progress-bar-bg">
-            <div className="progress-bar-fill" style={{ width: `${conversionNumber}%` }}></div>
-          </div>
-        </div>
-      </div>
-
-      {/* A/B Testing Card */}
-      <div className="dashboard-card">
-        <h3>
-          <div className="widget-title-left">
-            <FlaskConical size={18} /> A/B Testing de CVs
-          </div>
-          <div className="widget-help-container">
-            <HelpCircle size={16} className="widget-help-icon" />
-            <div className="widget-tooltip">
-              Analiza la tasa de éxito de cada versión de tu CV. Útil para descubrir qué perfil o formato resuena mejor con los reclutadores y enfocarte en ese.
-            </div>
-          </div>
-        </h3>
-        {Object.keys(cvStats).length === 0 ? (
-          <div className="stale-empty">No hay suficientes datos todavía.</div>
-        ) : (
-          <table className="dashboard-ab-table">
-            <thead>
-              <tr>
-                <th>Versión CV</th>
-                <th>Enviados</th>
-                <th>Conversión</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(cvStats).map(([version, stats]) => {
-                const rateNum = stats.total > 0 ? (stats.interviews / stats.total) * 100 : 0;
-                const rateStr = rateNum.toFixed(1);
-                return (
-                  <tr key={version}>
-                    <td style={{ fontWeight: 600 }}>{version}</td>
-                    <td>{stats.total}</td>
-                    <td>
-                      <div className="ab-rate-container">
-                        <span className="highlight">{rateStr}%</span>
-                        <div className="ab-rate-bar">
-                          <div className="ab-rate-fill" style={{ width: `${rateNum}%` }}></div>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Follow-ups Card */}
-      <div className="dashboard-card">
-        <h3>
-          <div className="widget-title-left">
-            <Clock size={18} /> Acción Requerida
-          </div>
-          <div className="widget-help-container">
-            <HelpCircle size={16} className="widget-help-icon" />
-            <div className="widget-tooltip">
-              Lista las postulaciones en estado 'Aplicado' que llevan más de 7 días sin novedades. ¡Es el momento perfecto para enviar un email de seguimiento!
-            </div>
-          </div>
-        </h3>
-        <div className="stale-list">
-          {staleApps.length === 0 ? (
-            <div className="stale-empty">¡Estás al día! 🎉<br /><span style={{ fontSize: 12, fontWeight: 400 }}>No hay follow-ups pendientes.</span></div>
-          ) : (
-            staleApps.map(app => (
-              <div key={app.id} className="stale-item">
-                <div className="stale-item-info">
-                  <span className="stale-item-title">{app.nombreEmpresa}</span>
-                  <span className="stale-item-date">
-                    <AlertCircle size={12} /> Hace más de 7 días
-                  </span>
-                </div>
-                <form action={async () => {
-                  "use server";
-                  await updateStatusAction(app.id, "rechazado");
-                }}>
-                  <button
-                    type="submit"
-                    className="icon-button"
-                    title="Marcar como rechazado"
-                  >
-                    <Target size={14} />
-                  </button>
-                </form>
+            <div className="widget-help-container">
+              <HelpCircle size={16} className="widget-help-icon" />
+              <div className="widget-tooltip">
+                Compara el total de postulaciones enviadas con las que lograron avanzar a la etapa de entrevista. Te ayuda a diagnosticar si tu CV está funcionando.
               </div>
-            ))
-          )}
+            </div>
+          </h3>
+
+          <div className="metric-hero" style={{ margin: 'auto 0' }}>
+            <span className="metric-hero-value">{conversionRate}%</span>
+            <span className="metric-hero-label">Tasa de Éxito</span>
+          </div>
+
+          <div className="progress-container">
+            <div className="progress-label">
+              <span>Enviadas: {totalApplied}</span>
+              <span>Entrevistas: {totalInterviews}</span>
+            </div>
+            <div className="progress-bar-bg">
+              <div className="progress-bar-fill" style={{ width: `${conversionNumber}%` }}></div>
+            </div>
+          </div>
+        </div>
+
+        {/* A/B Testing Card */}
+        <div className="dashboard-card" style={{ flex: '1 1 300px' }}>
+          <h3>
+            <div className="widget-title-left">
+              <FlaskConical size={18} /> A/B Testing de CVs
+            </div>
+            <div className="widget-help-container">
+              <HelpCircle size={16} className="widget-help-icon" />
+              <div className="widget-tooltip">
+                Analiza la tasa de éxito de cada versión de tu CV. Útil para descubrir qué perfil o formato resuena mejor con los reclutadores y enfocarte en ese.
+              </div>
+            </div>
+          </h3>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {Object.keys(cvStats).length === 0 ? (
+              <div className="stale-empty" style={{ margin: 'auto' }}>No hay suficientes datos todavía.</div>
+            ) : (
+              <table className="dashboard-ab-table" style={{ margin: 'auto 0' }}>
+                <thead>
+                  <tr>
+                    <th>Versión CV</th>
+                    <th>Enviados</th>
+                    <th>Conversión</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(cvStats).map(([version, stats]) => {
+                    const rateNum = stats.total > 0 ? (stats.interviews / stats.total) * 100 : 0;
+                    const rateStr = rateNum.toFixed(1);
+                    return (
+                      <tr key={version}>
+                        <td style={{ fontWeight: 600 }}>{version}</td>
+                        <td>{stats.total}</td>
+                        <td>
+                          <div className="ab-rate-container">
+                            <span className="highlight">{rateStr}%</span>
+                            <div className="ab-rate-bar">
+                              <div className="ab-rate-fill" style={{ width: `${rateNum}%` }}></div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* Follow-ups Card */}
+        <div className="dashboard-card" style={{ flex: '1 1 300px' }}>
+          <h3>
+            <div className="widget-title-left">
+              <Clock size={18} /> Acción Requerida
+            </div>
+            <div className="widget-help-container">
+              <HelpCircle size={16} className="widget-help-icon" />
+              <div className="widget-tooltip">
+                Lista las postulaciones en estado 'Aplicado' que llevan más de 7 días sin novedades. ¡Es el momento perfecto para enviar un email de seguimiento!
+              </div>
+            </div>
+          </h3>
+          <div className="stale-list" style={{ flex: 1, maxHeight: 'none' }}>
+            {staleApps.length === 0 ? (
+              <div className="stale-empty" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div>¡Estás al día! 🎉<br /><span style={{ fontSize: 12, fontWeight: 400 }}>No hay follow-ups pendientes.</span></div>
+              </div>
+            ) : (
+              staleApps.map(app => (
+                <div key={app.id} className="stale-item">
+                  <div className="stale-item-info">
+                    <span className="stale-item-title">{app.nombreEmpresa}</span>
+                    <span className="stale-item-date">
+                      <AlertCircle size={12} /> Hace más de 7 días
+                    </span>
+                  </div>
+                  <form action={async () => {
+                    "use server";
+                    await updateStatusAction(app.id, "rechazado");
+                  }}>
+                    <button
+                      type="submit"
+                      className="icon-button"
+                      title="Marcar como rechazado"
+                    >
+                      <Target size={14} />
+                    </button>
+                  </form>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

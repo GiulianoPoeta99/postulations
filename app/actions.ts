@@ -77,7 +77,12 @@ function sanitizeFilename(filename: string) {
 
 async function extractCvData(formData: FormData): Promise<CvInput | null> {
   const file = formData.get("cvFile");
-  const cvVersion = formString(formData, "cvVersion");
+  let cvVersion = formString(formData, "cvVersion");
+  const cvLanguage = formString(formData, "cvLanguage");
+  
+  if (cvVersion && cvLanguage) {
+    cvVersion = `${cvVersion}::${cvLanguage}`;
+  }
   
   let cvFilename = "";
   let cvStoredName = "";
@@ -309,16 +314,19 @@ export async function compileCv(name: string, yamlContent: string, language?: st
 
     fs.mkdirSync(outputDir, { recursive: true });
 
-    const pdfPath = path.join(outputDir, `${sanitized}.pdf`);
+    const suffix = language ? `_${language}` : "";
+    const basename = `${sanitized}${suffix}`;
+
+    const pdfPath = path.join(outputDir, `${basename}.pdf`);
     if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
 
-    const pngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${sanitized}_`) && f.endsWith(".png"));
+    const pngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${basename}_`) && f.endsWith(".png"));
     for (const file of pngFiles) {
       fs.unlinkSync(path.join(outputDir, file));
     }
 
-    const pdfOutputPath = path.join(outputDir, `${sanitized}.pdf`);
-    const pngOutputPath = path.join(outputDir, `${sanitized}.png`);
+    const pdfOutputPath = path.join(outputDir, `${basename}.pdf`);
+    const pngOutputPath = path.join(outputDir, `${basename}.png`);
     
     try {
       const cmd = `python3 -m rendercv render "${compilePath}" -o "${outputDir}" --pdf-path "${pdfOutputPath}" --png-path "${pngOutputPath}" --dont-generate-markdown --dont-generate-html`;
@@ -330,7 +338,7 @@ export async function compileCv(name: string, yamlContent: string, language?: st
       }
     }
 
-    const newPngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${sanitized}_`) && f.endsWith(".png"));
+    const newPngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${basename}_`) && f.endsWith(".png"));
     
     revalidatePath("/");
     return { success: true, pageCount: newPngFiles.length };

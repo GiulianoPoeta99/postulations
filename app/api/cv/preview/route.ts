@@ -7,19 +7,22 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const page = searchParams.get("page") || "1";
-  const version = searchParams.get("version") || "default";
+  const versionParam = searchParams.get("version") || "default";
+  const langParam = searchParams.get("lang") || "";
 
   const pageNum = parseInt(page, 10);
   if (isNaN(pageNum) || pageNum < 1) {
     return new NextResponse("Numero de pagina invalido.", { status: 400 });
   }
 
-  const sanitizedVersion = version.replace(/[^a-zA-Z0-9_-]/g, "") || "default";
+  const sanitizedVersion = versionParam.replace(/[^a-zA-Z0-9_-]/g, "") || "default";
+  const suffix = langParam ? `_${langParam}` : "";
+  
   const filePath = path.join(
     process.cwd(),
     "data",
     "rendercv_output",
-    `${sanitizedVersion}_${pageNum}.png`
+    `${sanitizedVersion}${suffix}_${pageNum}.png`
   );
 
   if (!fs.existsSync(filePath)) {

@@ -80,6 +80,11 @@ export type ApplicationFieldsProps = {
 
 export function ApplicationFields({ application, includeInitialNote = false, cvVersions = [] }: ApplicationFieldsProps) {
   const [notaInicialText, setNotaInicialText] = useState("");
+  
+  const dbCvVersionFull = application?.cvVersion || "";
+  const [dbCvVersion, dbCvLang] = dbCvVersionFull.includes("::") 
+    ? dbCvVersionFull.split("::") 
+    : [dbCvVersionFull, "es"];
 
   return (
     <div className="modal-grid">
@@ -154,16 +159,25 @@ export function ApplicationFields({ application, includeInitialNote = false, cvV
         </div>
       ) : null}
 
-      <div className="field span-2 cv-selection-row">
-        <label className="field" style={{ flex: 1 }}>
-          <span>CV Generado</span>
-          <select name="cvVersion" defaultValue={application?.cvVersion ?? ""}>
-            <option value="">Ninguno</option>
-            {cvVersions.map(v => (
-              <option key={v} value={v}>{v}</option>
-            ))}
-          </select>
-        </label>
+      <div className="field span-2 cv-selection-row" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+        <div style={{ flex: 1, display: 'flex', gap: '0.5rem' }}>
+          <label className="field" style={{ flex: 2 }}>
+            <span>CV Generado</span>
+            <select name="cvVersion" defaultValue={dbCvVersion}>
+              <option value="">Ninguno</option>
+              {cvVersions.map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field" style={{ flex: 1 }}>
+            <span>Idioma</span>
+            <select name="cvLanguage" defaultValue={dbCvLang}>
+              <option value="es">🇪🇸 ES</option>
+              <option value="en">🇬🇧 EN</option>
+            </select>
+          </label>
+        </div>
 
         <span style={{ display: 'flex', alignItems: 'center', margin: '0 1rem', color: 'var(--gray)' }}>O</span>
 

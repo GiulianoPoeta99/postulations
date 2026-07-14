@@ -306,8 +306,8 @@ export function CvClientView() {
                 {previewVersion > 0 && (
                   <a
                     className="inline-link"
-                    href={`/api/cv/pdf?version=${activeVersion}&v=${previewVersion}`}
-                    download={`${activeVersion}_cv.pdf`}
+                    href={`/api/cv/pdf?version=${activeVersion}&lang=${cvLanguage}&v=${previewVersion}`}
+                    download={`${activeVersion}_${cvLanguage}_cv.pdf`}
                   >
                     <FileText size={14} aria-hidden="true" />
                     Descargar PDF
@@ -339,7 +339,7 @@ export function CvClientView() {
                       {Array.from({ length: cvPageCount }).map((_, i) => (
                         <img
                           key={`${previewVersion}-${i}`}
-                          src={`/api/cv/preview?version=${activeVersion}&page=${i + 1}&v=${previewVersion}`}
+                          src={`/api/cv/preview?version=${activeVersion}&lang=${cvLanguage}&page=${i + 1}&v=${previewVersion}`}
                           alt={`Vista previa del CV página ${i + 1}`}
                           className={`cv-preview-image ${compileStatus === "compiling" ? "compiling" : ""}`}
                         />

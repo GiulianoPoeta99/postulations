@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
+import { SidebarLayout } from "./components/SidebarLayout";
+import { listApplications } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Postulaciones",
@@ -11,10 +14,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const applications = listApplications();
+
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        <script
+        <Script
+          id="theme-initializer"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -29,7 +36,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <SidebarLayout applicationsCount={applications.length}>
+          {children}
+        </SidebarLayout>
+      </body>
     </html>
   );
 }

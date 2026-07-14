@@ -2,10 +2,12 @@
 // Force recompile
 import {
   AlertCircle,
+  Calendar,
   Clock,
   ExternalLink,
   Eye,
   FileText,
+  Flame,
   FlaskConical,
   HelpCircle,
   MessageSquareText,
@@ -591,12 +593,42 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
 
           const staleApps = applications.filter(isApplicationStale);
 
+          // Goals Logic
+          const dailyGoal = 10;
+          const weeklyGoal = 70;
+
+          const todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
+          const todayApps = applications.filter(a => new Date(a.createdAt).getTime() >= todayStart.getTime());
+          const dailyProgress = Math.min((todayApps.length / dailyGoal) * 100, 100);
+
           const recentApps = applications.filter(a => {
             const daysDiff = (Date.now() - new Date(a.createdAt).getTime()) / (1000 * 3600 * 24);
             return daysDiff <= 7;
           });
-          const weeklyGoal = 10;
           const weeklyProgress = Math.min((recentApps.length / weeklyGoal) * 100, 100);
+
+          // Streak Logic
+          const appsByDate = applications.reduce((acc, app) => {
+            const d = new Date(app.createdAt);
+            const dateStr = d.toLocaleDateString();
+            acc[dateStr] = (acc[dateStr] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+
+          let currentStreak = 0;
+          let dateToCheck = new Date();
+          const todayStr = dateToCheck.toLocaleDateString();
+
+          if ((appsByDate[todayStr] || 0) >= dailyGoal) {
+            currentStreak++;
+          }
+          dateToCheck.setDate(dateToCheck.getDate() - 1);
+
+          while ((appsByDate[dateToCheck.toLocaleDateString()] || 0) >= dailyGoal) {
+            currentStreak++;
+            dateToCheck.setDate(dateToCheck.getDate() - 1);
+          }
 
           const cvStats = applications.reduce((acc, app) => {
             const version = app.cvVersion || "Sin especificar";
@@ -608,6 +640,59 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
 
           return (
             <div className="dashboard-grid">
+              {/* GOALS HERO WIDGET */}
+              <div className="dashboard-card goals-hero-card">
+                <h3>
+                  <div className="widget-title-left">
+                    <Target size={18} /> Rendimiento y Objetivos
+                  </div>
+                  <div className="widget-help-container">
+                    <HelpCircle size={16} className="widget-help-icon" />
+                    <div className="widget-tooltip">
+                      Mantener un volumen alto de postulaciones es clave. Cumple tu objetivo diario y semanal para mantener tu racha de consistencia.
+                    </div>
+                  </div>
+                </h3>
+                <div className="goals-hero-grid">
+                  <div className="goal-hero-item">
+                    <div className="goal-hero-title"><Target size={16} /> Objetivo Diario</div>
+                    <div className="goal-hero-value">
+                      {todayApps.length} <span className="goal-target">/ {dailyGoal}</span>
+                    </div>
+                    <div className="goal-hero-progress-bg">
+                      <div className={`goal-hero-progress-fill ${dailyProgress >= 100 ? 'success' : ''}`} style={{ width: `${dailyProgress}%` }}></div>
+                    </div>
+                    <div className={`goal-hero-status ${dailyProgress >= 100 ? 'success' : 'pending'}`}>
+                      {dailyProgress >= 100 ? '¡Objetivo cumplido! 🚀' : `Faltan ${dailyGoal - todayApps.length} postulaciones`}
+                    </div>
+                  </div>
+                  
+                  <div className="goal-hero-item">
+                    <div className="goal-hero-title"><Calendar size={16} /> Objetivo Semanal</div>
+                    <div className="goal-hero-value">
+                      {recentApps.length} <span className="goal-target">/ {weeklyGoal}</span>
+                    </div>
+                    <div className="goal-hero-progress-bg">
+                      <div className={`goal-hero-progress-fill ${weeklyProgress >= 100 ? 'success' : ''}`} style={{ width: `${weeklyProgress}%` }}></div>
+                    </div>
+                    <div className={`goal-hero-status ${weeklyProgress >= 100 ? 'success' : 'pending'}`}>
+                      {weeklyProgress >= 100 ? '¡Semana superada! 🎉' : `Faltan ${weeklyGoal - recentApps.length} postulaciones`}
+                    </div>
+                  </div>
+
+                  <div className="goal-hero-item">
+                    <div className="goal-hero-title"><Flame size={16} /> Racha Actual</div>
+                    <div className="goal-hero-value">
+                      {currentStreak} <span className="goal-target">días</span>
+                    </div>
+                    <div className="goal-hero-status success" style={{ color: currentStreak > 0 ? 'var(--success)' : 'var(--muted)' }}>
+                      {currentStreak > 0 ? '¡Consistencia perfecta!' : '¡Cumple tu objetivo para iniciar tu racha!'}
+                    </div>
+                    <Flame size={80} className={`streak-icon-bg ${currentStreak > 0 ? 'active' : ''}`} />
+                  </div>
+                </div>
+              </div>
+
               {/* Funnel Card */}
               <div className="dashboard-card">
                 <h3>
@@ -635,41 +720,6 @@ export function PostulacionesClient({ applications }: PostulacionesClientProps) 
                   <div className="progress-bar-bg">
                     <div className="progress-bar-fill" style={{ width: `${conversionNumber}%` }}></div>
                   </div>
-                </div>
-              </div>
-
-              {/* Consistency Card */}
-              <div className="dashboard-card">
-                <h3>
-                  <div className="widget-title-left">
-                    <Target size={18} /> Consistencia Semanal
-                  </div>
-                  <div className="widget-help-container">
-                    <HelpCircle size={16} className="widget-help-icon" />
-                    <div className="widget-tooltip">
-                      Mide cuántas postulaciones has realizado en los últimos 7 días. Buscar trabajo es un juego de números, intenta mantener el objetivo semanal para no perder el ritmo.
-                    </div>
-                  </div>
-                </h3>
-
-                <div className="metric-hero">
-                  <span className="metric-hero-value">{recentApps.length}</span>
-                  <span className="metric-hero-label">Postulaciones (7 días)</span>
-                </div>
-
-                <div className="progress-container">
-                  <div className="progress-label">
-                    <span>Progreso semanal</span>
-                    <span>Objetivo: {weeklyGoal}</span>
-                  </div>
-                  <div className="progress-bar-bg">
-                    <div className="progress-bar-fill" style={{ width: `${weeklyProgress}%`, background: weeklyProgress >= 100 ? 'linear-gradient(90deg, #10b981, #059669)' : undefined }}></div>
-                  </div>
-                  {recentApps.length >= weeklyGoal ? (
-                    <p style={{ color: 'var(--success)', fontSize: 13, marginTop: 8, fontWeight: 600, textAlign: 'center' }}>¡Objetivo cumplido! 🚀</p>
-                  ) : (
-                    <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8, textAlign: 'center' }}>Faltan {weeklyGoal - recentApps.length} para tu meta.</p>
-                  )}
                 </div>
               </div>
 

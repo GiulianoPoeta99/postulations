@@ -1893,3 +1893,116 @@ tr:last-child td {
   background: var(--primary);
   border-radius: 3px;
 }
+
+/* ── GOALS HERO WIDGET ── */
+.goals-hero-card {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, var(--surface) 0%, rgba(0,0,0,0.01) 100%);
+  border: 1px solid var(--primary); /* subtle highlight */
+  box-shadow: 0 8px 32px rgba(0,0,0,0.04);
+}
+
+.goals-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .goals-hero-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.goal-hero-item {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  transition: transform 200ms ease;
+}
+
+.goal-hero-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.goal-hero-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.goal-hero-title svg {
+  color: var(--primary);
+}
+
+.goal-hero-value {
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.goal-hero-value span.goal-target {
+  font-size: 16px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.goal-hero-progress-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.goal-hero-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.goal-hero-progress-fill.success {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.goal-hero-status {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.goal-hero-status.success {
+  color: var(--success);
+}
+
+.goal-hero-status.pending {
+  color: var(--muted);
+}
+
+.streak-icon-bg {
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  opacity: 0.05;
+  color: #f59e0b;
+}
+
+.streak-icon-bg.active {
+  opacity: 0.15;
+}

@@ -35,6 +35,7 @@ import {
   softDeleteApplication,
   updateApplication,
   updateApplicationStatus,
+  createApplicationNote,
   updateApplicationNote,
   softDeleteApplicationNote,
   listCvVersionsFromDb,

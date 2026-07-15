@@ -307,14 +307,7 @@ export function CvClientView() {
                     </button>
                   </div>
 
-                  <select 
-                    value={cvLanguage} 
-                    onChange={(e) => setCvLanguage(e.target.value as "es" | "en")}
-                    style={{ marginLeft: 16, padding: "2px 8px", borderRadius: 4, background: "var(--bg-elevated)", color: "var(--text-main)", border: "1px solid var(--border-color)", fontSize: "0.9em" }}
-                  >
-                    <option value="es">🇪🇸 Español</option>
-                    <option value="en">🇬🇧 English</option>
-                  </select>
+
 
                   {hasUnsavedChanges && (
                     <span style={{ marginLeft: 12, fontSize: '0.75rem', color: '#ef4444', opacity: 0.8, fontStyle: 'italic' }}>
@@ -411,6 +404,14 @@ export function CvClientView() {
                       <Pencil size={14} /> Editar CV
                     </button>
                   )}
+                  <select 
+                    value={cvLanguage} 
+                    onChange={(e) => setCvLanguage(e.target.value as "es" | "en")}
+                    style={{ padding: "4px 8px", borderRadius: 4, background: "var(--surface)", color: "var(--foreground)", border: "1px solid var(--border)", fontSize: "13px" }}
+                  >
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="en">🇬🇧 English</option>
+                  </select>
                   {previewVersion > 0 && (
                     <a
                       className="inline-link"

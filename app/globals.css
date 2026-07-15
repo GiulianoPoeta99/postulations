@@ -973,6 +973,8 @@ tr:last-child td {
   flex-direction: column;
   gap: 24px;
   margin-top: 12px;
+  height: calc(100vh - 140px);
+  min-height: 0;
 }
 
 .cv-editor-panel, .cv-preview-panel {
@@ -982,9 +984,16 @@ tr:last-child td {
 }
 
 @media (min-width: 1100px) {
-  .cv-workspace {
+  .cv-workspace.is-viewing {
     display: grid;
-    grid-template-columns: 240px 1fr 1fr;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 12px 24px;
+  }
+
+  .cv-workspace.is-editing {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     grid-template-rows: auto 1fr;
     gap: 12px 24px;
   }
@@ -993,12 +1002,19 @@ tr:last-child td {
     display: contents;
   }
 
-  .cv-sidebar { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 12px; }
-  .cv-top-bar { grid-column: 2; grid-row: 1; align-self: end; }
-  .cv-codemirror-wrapper { grid-column: 2; grid-row: 2; }
-  .cv-error-log { grid-column: 2; grid-row: 3; }
-  .cv-editor-header { grid-column: 3; grid-row: 1; align-self: end; }
-  .cv-preview-container { grid-column: 3; grid-row: 2; }
+  /* Viewing Mode Layout */
+  .cv-workspace.is-viewing .cv-sidebar { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 12px; }
+  .cv-workspace.is-viewing .cv-editor-header { grid-column: 2; grid-row: 1; align-self: end; }
+  .cv-workspace.is-viewing .cv-preview-container { grid-column: 2; grid-row: 2; }
+
+  /* Editing Mode Layout */
+  .cv-workspace.is-editing .cv-top-bar { grid-column: 1; grid-row: 1; align-self: end; }
+  .cv-workspace.is-editing .cv-codemirror-wrapper, 
+  .cv-workspace.is-editing .cv-visual-wrapper { grid-column: 1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; }
+  .cv-workspace.is-editing .cv-error-log { grid-column: 1; grid-row: 3; }
+  
+  .cv-workspace.is-editing .cv-editor-header { grid-column: 2; grid-row: 1; align-self: end; }
+  .cv-workspace.is-editing .cv-preview-container { grid-column: 2; grid-row: 2; min-height: 0; }
 }
 
 /* CV Sidebar */
@@ -1234,8 +1250,6 @@ tr:last-child td {
 }
 
 .cv-codemirror-wrapper {
-  min-height: 600px;
-  height: calc(100vh - 250px);
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
@@ -1318,8 +1332,6 @@ tr:last-child td {
   border-radius: 8px;
   background: var(--surface-soft);
   overflow: hidden;
-  height: calc(100vh - 250px);
-  min-height: 600px;
   display: flex;
   flex-direction: column;
 }

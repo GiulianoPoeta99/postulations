@@ -35,9 +35,13 @@ import {
   softDeleteApplication,
   updateApplication,
   updateApplicationStatus,
-  createApplicationNote,
   updateApplicationNote,
   softDeleteApplicationNote,
+  listCvVersionsFromDb,
+  getCvVersionFromDb,
+  saveCvVersionToDb,
+  deleteCvVersionFromDb,
+  renameCvVersionInDb,
   type ApplicationInput,
   type CvInput
 } from "@/lib/db";
@@ -200,16 +204,19 @@ function ensureVersionsDir() {
 
 export async function listCvVersions(): Promise<string[]> {
   ensureVersionsDir();
-  const files = fs.readdirSync(versionsDir);
-  return files
-    .filter((file) => file.endsWith(".yaml"))
-    .map((file) => file.slice(0, -5));
+  return listCvVersionsFromDb();
 }
 
 export async function getCvVersion(name: string): Promise<string> {
   ensureVersionsDir();
   const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "");
   if (!sanitized) return "";
+  
+  // Try DB first
+  const dbContent = getCvVersionFromDb(sanitized);
+  if (dbContent) return dbContent;
+
+  // Fallback to file if DB doesn't have it (shouldn't happen after migration)
   const versionPath = path.join(versionsDir, `${sanitized}.yaml`);
   if (fs.existsSync(versionPath)) {
     return fs.readFileSync(versionPath, "utf-8");
@@ -225,6 +232,9 @@ export async function saveCvVersion(name: string, content: string): Promise<void
   if (!sanitized) return;
   const versionPath = path.join(versionsDir, `${sanitized}.yaml`);
   fs.writeFileSync(versionPath, content, "utf-8");
+  
+  // Save to DB snapshot
+  saveCvVersionToDb(sanitized, content);
   revalidatePath("/");
 }
 
@@ -232,6 +242,9 @@ export async function deleteCvVersion(name: string): Promise<void> {
   ensureVersionsDir();
   const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "");
   if (!sanitized) return;
+  
+  deleteCvVersionFromDb(sanitized);
+
   const versionPath = path.join(versionsDir, `${sanitized}.yaml`);
   if (fs.existsSync(versionPath)) {
     fs.unlinkSync(versionPath);
@@ -239,6 +252,10 @@ export async function deleteCvVersion(name: string): Promise<void> {
 
   const pdfPath = path.join(outputDir, `${sanitized}.pdf`);
   if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
+  
+  // Also delete preview PDF
+  const previewPdfPath = path.join(outputDir, `${sanitized}_preview.pdf`);
+  if (fs.existsSync(previewPdfPath)) fs.unlinkSync(previewPdfPath);
 
   if (fs.existsSync(outputDir)) {
     const pngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${sanitized}_`) && f.endsWith(".png"));
@@ -266,16 +283,22 @@ export async function renameCvVersion(oldName: string, newName: string): Promise
 
   try {
     fs.renameSync(oldVersionPath, newVersionPath);
+    renameCvVersionInDb(sanitizedOld, sanitizedNew);
 
     // Also rename associated output files if they exist
     const oldPdfPath = path.join(outputDir, `${sanitizedOld}.pdf`);
     const newPdfPath = path.join(outputDir, `${sanitizedNew}.pdf`);
     if (fs.existsSync(oldPdfPath)) fs.renameSync(oldPdfPath, newPdfPath);
+    
+    // Rename previews
+    const oldPreviewPdfPath = path.join(outputDir, `${sanitizedOld}_preview.pdf`);
+    const newPreviewPdfPath = path.join(outputDir, `${sanitizedNew}_preview.pdf`);
+    if (fs.existsSync(oldPreviewPdfPath)) fs.renameSync(oldPreviewPdfPath, newPreviewPdfPath);
 
     if (fs.existsSync(outputDir)) {
       const pngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${sanitizedOld}_`) && f.endsWith(".png"));
       for (const file of pngFiles) {
-        const suffix = file.substring(sanitizedOld.length); // gets "_1.png", etc
+        const suffix = file.substring(sanitizedOld.length); // gets "_1.png" or "_preview_1.png"
         fs.renameSync(path.join(outputDir, file), path.join(outputDir, `${sanitizedNew}${suffix}`));
       }
     }
@@ -291,10 +314,14 @@ export async function compileCv(name: string, yamlContent: string, language?: st
     ensureVersionsDir();
     const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "");
     if (!sanitized) return { success: false, error: "Nombre inválido." };
-    const versionPath = path.join(versionsDir, `${sanitized}.yaml`);
-    fs.writeFileSync(versionPath, yamlContent, "utf-8");
+    
+    // WARNING: We write to a _preview.yaml instead of overwriting the original file.
+    // This allows the user to have unsaved changes in the UI that are compiled live,
+    // without destroying the saved version.
+    const tempVersionPath = path.join(versionsDir, `${sanitized}_preview.yaml`);
+    fs.writeFileSync(tempVersionPath, yamlContent, "utf-8");
 
-    let compilePath = versionPath;
+    let compilePath = tempVersionPath;
     if (language) {
       try {
         const obj = parse(yamlContent);
@@ -305,7 +332,7 @@ export async function compileCv(name: string, yamlContent: string, language?: st
           delete resolved.cv.shared_data;
         }
         
-        compilePath = path.join(versionsDir, `${sanitized}_compiled.yaml`);
+        compilePath = path.join(versionsDir, `${sanitized}_preview_compiled.yaml`);
         fs.writeFileSync(compilePath, stringify(resolved), "utf-8");
       } catch (err) {
         console.error("YAML preprocessing error:", err);
@@ -315,7 +342,7 @@ export async function compileCv(name: string, yamlContent: string, language?: st
     fs.mkdirSync(outputDir, { recursive: true });
 
     const suffix = language ? `_${language}` : "";
-    const basename = `${sanitized}${suffix}`;
+    const basename = `${sanitized}_preview${suffix}`;
 
     const pdfPath = path.join(outputDir, `${basename}.pdf`);
     if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
@@ -333,14 +360,18 @@ export async function compileCv(name: string, yamlContent: string, language?: st
       execSync(cmd, { stdio: "pipe" });
     } finally {
       // Always clean up the temporary compiled YAML to avoid garbage files
-      if (compilePath !== versionPath && fs.existsSync(compilePath)) {
+      if (compilePath !== tempVersionPath && fs.existsSync(compilePath)) {
         fs.unlinkSync(compilePath);
+      }
+      if (fs.existsSync(tempVersionPath)) {
+        fs.unlinkSync(tempVersionPath);
       }
     }
 
     const newPngFiles = fs.readdirSync(outputDir).filter(f => f.startsWith(`${basename}_`) && f.endsWith(".png"));
     
-    revalidatePath("/");
+    // We don't revalidatePath here because this is just a preview compilation.
+    // The actual save action triggers revalidatePath.
     return { success: true, pageCount: newPngFiles.length };
   } catch (error: any) {
     console.error("RenderCV compile error:", error);

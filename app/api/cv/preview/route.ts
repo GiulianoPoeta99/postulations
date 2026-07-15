@@ -18,6 +18,13 @@ export async function GET(request: NextRequest) {
   const sanitizedVersion = versionParam.replace(/[^a-zA-Z0-9_-]/g, "") || "default";
   const suffix = langParam ? `_${langParam}` : "";
   
+  const previewFilePath = path.join(
+    process.cwd(),
+    "data",
+    "rendercv_output",
+    `${sanitizedVersion}_preview${suffix}_${pageNum}.png`
+  );
+
   const filePath = path.join(
     process.cwd(),
     "data",
@@ -25,12 +32,14 @@ export async function GET(request: NextRequest) {
     `${sanitizedVersion}${suffix}_${pageNum}.png`
   );
 
-  if (!fs.existsSync(filePath)) {
+  const targetPath = fs.existsSync(previewFilePath) ? previewFilePath : filePath;
+
+  if (!fs.existsSync(targetPath)) {
     return new NextResponse("Pagina de previsualizacion no encontrada.", { status: 404 });
   }
 
   try {
-    const file = fs.readFileSync(filePath);
+    const file = fs.readFileSync(targetPath);
     return new Response(file, {
       headers: {
         "Content-Type": "image/png",

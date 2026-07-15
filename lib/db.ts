@@ -268,6 +268,36 @@ function migrateDatabase(database: Database.Database) {
     WHERE p.notas != '' 
       AND NOT EXISTS (SELECT 1 FROM application_notes an WHERE an.postulacion_id = p.id)
   `);
+
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS cv_versions (
+      name TEXT PRIMARY KEY,
+      yaml_content TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  // Migrate existing .yaml files to DB
+  try {
+    const versionsDir = path.join(process.cwd(), "data", "cv_versions");
+    if (fs.existsSync(versionsDir)) {
+      const files = fs.readdirSync(versionsDir);
+      for (const file of files) {
+        if (file.endsWith(".yaml") && !file.endsWith("_compiled.yaml") && !file.endsWith("_preview.yaml")) {
+          const name = file.slice(0, -5);
+          const content = fs.readFileSync(path.join(versionsDir, file), "utf-8");
+          
+          const exists = database.prepare("SELECT 1 FROM cv_versions WHERE name = ?").get(name);
+          if (!exists) {
+            database.prepare("INSERT INTO cv_versions (name, yaml_content) VALUES (?, ?)").run(name, content);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Failed to migrate cv_versions to DB:", err);
+  }
 }
 
 const db = globalThis.postulacionesDb ?? openDatabase();
@@ -524,4 +554,38 @@ export function getCvFile(storedName: string): CvInput | null {
     cvFilename: row.cv_filename,
     cvStoredName: row.cv_stored_name
   };
+}
+
+export function listCvVersionsFromDb(): string[] {
+  const rows = db.prepare("SELECT name FROM cv_versions ORDER BY name ASC").all() as { name: string }[];
+  return rows.map((r) => r.name);
+}
+
+export function getCvVersionFromDb(name: string): string | null {
+  const row = db.prepare("SELECT yaml_content FROM cv_versions WHERE name = ?").get(name) as { yaml_content: string } | undefined;
+  return row ? row.yaml_content : null;
+}
+
+export function saveCvVersionToDb(name: string, content: string): void {
+  db.prepare(`
+    INSERT INTO cv_versions (name, yaml_content, updated_at)
+    VALUES (@name, @content, datetime('now'))
+    ON CONFLICT(name) DO UPDATE SET
+      yaml_content = excluded.yaml_content,
+      updated_at = excluded.updated_at
+  `).run({ name, content });
+}
+
+export function deleteCvVersionFromDb(name: string): void {
+  db.prepare("DELETE FROM cv_versions WHERE name = ?").run(name);
+}
+
+export function renameCvVersionInDb(oldName: string, newName: string): void {
+  // SQLite doesn't have an easy RENAME primary key if there are foreign keys, but here there are none.
+  // Actually an UPDATE works.
+  db.prepare(`
+    UPDATE cv_versions
+    SET name = @newName, updated_at = datetime('now')
+    WHERE name = @oldName
+  `).run({ oldName, newName });
 }

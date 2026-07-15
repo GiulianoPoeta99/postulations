@@ -16,21 +16,32 @@ export async function GET(request: NextRequest) {
     langParam = parts[1];
   }
 
-  const sanitized = version.replace(/[^a-zA-Z0-9_-]/g, "") || "default";
+  const sanitizedVersion = version.replace(/[^a-zA-Z0-9_-]/g, "") || "default";
   const suffix = langParam ? `_${langParam}` : "";
-  const basename = `${sanitized}${suffix}`;
-  
-  const filePath = path.join(process.cwd(), "data", "rendercv_output", `${basename}.pdf`);
+  const basename = `${sanitizedVersion}${suffix}`;
 
-  if (!fs.existsSync(filePath)) {
-    return new NextResponse("CV PDF no encontrado. Por favor, compila primero.", {
-      status: 404,
-      headers: { "Content-Type": "text/plain; charset=utf-8" }
-    });
+  const previewFilePath = path.join(
+    process.cwd(),
+    "data",
+    "rendercv_output",
+    `${sanitizedVersion}_preview${suffix}.pdf`
+  );
+
+  const filePath = path.join(
+    process.cwd(),
+    "data",
+    "rendercv_output",
+    `${sanitizedVersion}${suffix}.pdf`
+  );
+
+  const targetPath = fs.existsSync(previewFilePath) ? previewFilePath : filePath;
+
+  if (!fs.existsSync(targetPath)) {
+    return new NextResponse("PDF no encontrado.", { status: 404 });
   }
 
   try {
-    const file = fs.readFileSync(filePath);
+    const file = fs.readFileSync(targetPath);
     return new Response(file, {
       headers: {
         "Content-Type": "application/pdf",

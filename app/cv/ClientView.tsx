@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FileText, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { FileText, Pencil, Play, Plus, Trash2, Save, Undo2, X } from "lucide-react";
 import CodeMirror from '@uiw/react-codemirror';
 import { yaml } from '@codemirror/lang-yaml';
 import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode';
@@ -17,15 +17,20 @@ import {
   renameCvVersion
 } from "@/app/actions";
 import { Modal } from "../components/Shared";
+import { VisualEditor } from "./VisualEditor";
 
 export function CvClientView() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [cvLanguage, setCvLanguage] = useState<"es" | "en">("es");
   
   // CV Editor states
+  const [editorMode, setEditorMode] = useState<"visual" | "code">("visual");
   const [cvYaml, setCvYaml] = useState("");
+  const [originalYaml, setOriginalYaml] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
   const [cvVersions, setCvVersions] = useState<string[]>([]);
   const [activeVersion, setActiveVersion] = useState("");
+  const [isFetchingYaml, setIsFetchingYaml] = useState(false);
   const [showSaveAsModal, setShowSaveAsModal] = useState(false);
   const [saveAsName, setSaveAsName] = useState("");
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -99,10 +104,24 @@ export function CvClientView() {
 
     if (!activeVersion) return;
 
+    setIsFetchingYaml(true);
     getCvVersion(activeVersion).then((yaml) => {
       if (cancelled) return;
-      setCvYaml(yaml);
-      doCompile(activeVersion, yaml, cvLanguageRef.current);
+      
+      setOriginalYaml(yaml);
+      
+      const localDraft = localStorage.getItem(`unsaved_cv_${activeVersion}`);
+      if (localDraft && localDraft !== yaml) {
+        setCvYaml(localDraft);
+        setIsEditing(true);
+        doCompile(activeVersion, localDraft, cvLanguageRef.current);
+      } else {
+        setCvYaml(yaml);
+        setIsEditing(false);
+        doCompile(activeVersion, yaml, cvLanguageRef.current);
+      }
+      
+      setIsFetchingYaml(false);
     });
 
     return () => { cancelled = true; };
@@ -127,8 +146,30 @@ export function CvClientView() {
 
   const handleYamlChange = (val: string) => {
     setCvYaml(val);
+    localStorage.setItem(`unsaved_cv_${activeVersion}`, val);
     isDirtyRef.current = true;
   };
+
+  const handleSaveCurrent = async () => {
+    setCompileStatus("compiling");
+    await saveCvVersion(activeVersion, cvYaml);
+    setOriginalYaml(cvYaml);
+    localStorage.removeItem(`unsaved_cv_${activeVersion}`);
+    setCompileStatus("success");
+    setIsEditing(false);
+    // Trigger preview compilation just to be sure it's fresh
+    doCompile(activeVersion, cvYaml, cvLanguage);
+  };
+
+  const handleDiscard = () => {
+    if (!confirm("¿Descartar cambios sin guardar?")) return;
+    setCvYaml(originalYaml);
+    localStorage.removeItem(`unsaved_cv_${activeVersion}`);
+    setIsEditing(false);
+    doCompile(activeVersion, originalYaml, cvLanguage);
+  };
+
+  const hasUnsavedChanges = cvYaml !== originalYaml;
 
   const handleSaveAs = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +198,7 @@ export function CvClientView() {
   const handleDeleteVersion = async (versionToDelete: string) => {
     if (!confirm(`¿Eliminar la versión "${versionToDelete}"?`)) return;
     await deleteCvVersion(versionToDelete);
+    localStorage.removeItem(`unsaved_cv_${versionToDelete}`);
 
     const newVersions = cvVersions.filter(v => v !== versionToDelete);
     setCvVersions(newVersions);
@@ -167,6 +209,7 @@ export function CvClientView() {
       } else {
         setActiveVersion("");
         setCvYaml("");
+        setOriginalYaml("");
       }
     }
     await loadVersions();
@@ -193,10 +236,11 @@ export function CvClientView() {
 
   return (
     <>
-      <div className="cv-workspace" style={{ marginTop: 0 }}>
+      <div className={`cv-workspace ${isEditing ? 'is-editing' : 'is-viewing'}`} style={{ marginTop: 0 }}>
         {/* Sidebar */}
-        <div className="cv-sidebar">
-          <div className="cv-sidebar-header">
+        {!isEditing && (
+          <div className="cv-sidebar">
+            <div className="cv-sidebar-header">
             <h3>Versiones</h3>
             <button
               className="icon-button"
@@ -237,14 +281,32 @@ export function CvClientView() {
             ))}
           </div>
         </div>
+        )}
 
         {/* Editor panel */}
         {activeVersion ? (
           <>
-            <div className="cv-editor-panel">
-              <div className="cv-top-bar">
+            {isEditing && (
+              <div className="cv-editor-panel">
+                <div className="cv-top-bar">
                 <div className="cv-top-bar-left">
-                  <span className="cv-version-label">Editando: {activeVersion}</span>
+                  <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: 6, overflow: 'hidden' }}>
+                    <button 
+                      onClick={() => setEditorMode("visual")}
+                      type="button"
+                      style={{ padding: "4px 12px", background: editorMode === "visual" ? "var(--bg-elevated)" : "transparent", color: "var(--text-main)", border: 'none', cursor: 'pointer', fontWeight: editorMode === "visual" ? 'bold' : 'normal' }}
+                    >
+                      Visual
+                    </button>
+                    <button 
+                      onClick={() => setEditorMode("code")}
+                      type="button"
+                      style={{ padding: "4px 12px", background: editorMode === "code" ? "var(--bg-elevated)" : "transparent", color: "var(--text-main)", border: 'none', borderLeft: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: editorMode === "code" ? 'bold' : 'normal' }}
+                    >
+                      Código
+                    </button>
+                  </div>
+
                   <select 
                     value={cvLanguage} 
                     onChange={(e) => setCvLanguage(e.target.value as "es" | "en")}
@@ -253,10 +315,16 @@ export function CvClientView() {
                     <option value="es">🇪🇸 Español</option>
                     <option value="en">🇬🇧 English</option>
                   </select>
+
+                  {hasUnsavedChanges && (
+                    <span style={{ marginLeft: 12, fontSize: '0.75rem', color: '#ef4444', opacity: 0.8, fontStyle: 'italic' }}>
+                      cambios sin guardar
+                    </span>
+                  )}
                 </div>
                 <div className="cv-compile-inline">
                   {compileStatus === "compiling" && (
-                    <span className="compile-status compiling" title="Compilando...">
+                    <span className="compile-status compiling" title="Procesando...">
                       <span className="spinner-small" aria-hidden="true"></span>
                     </span>
                   )}
@@ -266,53 +334,94 @@ export function CvClientView() {
                   {compileStatus === "error" && (
                     <span className="compile-status error" title="Error">!</span>
                   )}
+                  
+                  {hasUnsavedChanges ? (
+                    <button
+                      className="icon-button"
+                      type="button"
+                      onClick={handleDiscard}
+                      title="Descartar cambios y cerrar"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      <Undo2 size={15} aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <button
+                      className="icon-button"
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      title="Cerrar editor"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      <X size={15} aria-hidden="true" />
+                    </button>
+                  )}
+
                   <button
                     className="primary-button icon-only"
                     type="button"
-                    onClick={handleCompile}
+                    onClick={hasUnsavedChanges ? handleSaveCurrent : handleCompile}
                     disabled={compileStatus === "compiling"}
-                    title="Forzar Compilación"
+                    title={hasUnsavedChanges ? "Guardar cambios" : "Forzar compilación"}
                   >
-                    <Play size={15} aria-hidden="true" />
+                    {hasUnsavedChanges ? <Save size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
                   </button>
                 </div>
               </div>
 
-              <div className="cv-codemirror-wrapper">
-                <CodeMirror
-                  value={cvYaml}
-                  height="100%"
-                  extensions={[yaml(), EditorView.lineWrapping, wrappedLineIndent]}
-                  theme={theme === "dark" ? vscodeDark : vscodeLight}
-                  onChange={(value) => handleYamlChange(value)}
-                  basicSetup={{
-                    lineNumbers: true,
-                    highlightActiveLineGutter: true,
-                    foldGutter: true,
-                    tabSize: 2,
-                  }}
-                />
-              </div>
+              {isFetchingYaml ? (
+                <div className="cv-visual-wrapper" style={{ flex: 1, overflow: 'hidden', padding: '2rem', textAlign: 'center' }}>
+                  Cargando...
+                </div>
+              ) : editorMode === "code" ? (
+                <div className="cv-codemirror-wrapper">
+                  <CodeMirror
+                    value={cvYaml}
+                    height="100%"
+                    extensions={[yaml(), EditorView.lineWrapping, wrappedLineIndent]}
+                    theme={theme === "dark" ? vscodeDark : vscodeLight}
+                    onChange={(value) => handleYamlChange(value)}
+                    basicSetup={{
+                      lineNumbers: true,
+                      highlightActiveLineGutter: true,
+                      foldGutter: true,
+                      tabSize: 2,
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="cv-visual-wrapper" style={{ flex: 1, overflow: 'hidden' }}>
+                  <VisualEditor key={activeVersion} yamlContent={cvYaml} onChange={handleYamlChange} />
+                </div>
+              )}
 
               {compileError && (
                 <div className="cv-error-log">{compileError}</div>
               )}
             </div>
+            )}
 
             {/* Preview panel */}
             <div className="cv-preview-panel">
               <header className="cv-editor-header">
-                <h2>Vista previa en vivo</h2>
-                {previewVersion > 0 && (
-                  <a
-                    className="inline-link"
-                    href={`/api/cv/pdf?version=${activeVersion}&lang=${cvLanguage}&v=${previewVersion}`}
-                    download={`${activeVersion}_${cvLanguage}_cv.pdf`}
-                  >
-                    <FileText size={14} aria-hidden="true" />
-                    Descargar PDF
-                  </a>
-                )}
+                <h2>{isEditing ? "Vista Previa" : activeVersion}</h2>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  {!isEditing && (
+                    <button className="primary-button compact-button" onClick={() => setIsEditing(true)}>
+                      <Pencil size={14} /> Editar CV
+                    </button>
+                  )}
+                  {previewVersion > 0 && (
+                    <a
+                      className="inline-link"
+                      href={`/api/cv/pdf?version=${activeVersion}&lang=${cvLanguage}&v=${previewVersion}`}
+                      download={`${activeVersion}_${cvLanguage}_cv.pdf`}
+                    >
+                      <FileText size={14} aria-hidden="true" />
+                      Descargar PDF
+                    </a>
+                  )}
+                </div>
               </header>
 
               <div className="cv-preview-container">
